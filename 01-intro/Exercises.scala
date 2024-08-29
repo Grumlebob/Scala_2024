@@ -3,13 +3,14 @@
 
 package adpro.intro
 
+import scala.annotation.tailrec
+
 object MyModule:
 
   def abs(n: Int): Int =
     if n < 0 then -n else n
 
   // Exercise 1
-
   def square(n: Int): Int =
     n * n
 
@@ -25,12 +26,17 @@ object MyModule:
 
 end MyModule
 
-// Exercise 2 requires no programming
+/** Exercise 2. [E] In functional languages it is common to experiment with code in an interactive way
+in a REPL (read-evaluate-print-loop). Start Scala’s repl using scala-cli repl .. This starts scala
+with your project loaded and the classpath configured. Experiment with calling adpro.intro.MyModule.abs
+and square interactively. Store results in new values (using val).
+* */
 
 // Exercise 3
-
 def fib(n: Int): Int =
 
+  //Brugere bare en acc, istedet for tail-call optimisation
+  @annotation.tailrec
   def loop (acc: Int, current: Int, n: Int): Int =
     if n == 0 then acc
     else loop (current, acc + current, n - 1)
@@ -38,27 +44,46 @@ def fib(n: Int): Int =
   loop (0, 1, n)
 
 // Exercise 4
-
 def isSorted[A](as: Array[A], ordered: (A, A) => Boolean): Boolean =
-  ???
+  @tailrec
+  def loop(prevElement: A, array: Array[A]): Boolean =
+    if array.isEmpty then true
+    else if !ordered(prevElement, array(0)) then false
+    else loop(array(0), array.drop(1))
+  //Start med head og tail som array. Hvis der er 0 eller 1 element er den altid sorteret.
+  if as.isEmpty then true
+  else
+    if as.length == 1 then true
+    else loop(as(0), as.drop(1))
+
 
 // Exercise 5
-
+/*Assignment description:
+a function that converts a binary function f (function
+taking two arguments) into a function that takes one argument and after getting the argument returns
+a function awaiting the other argument. Once both arguments are given, the transformed function
+should behave the same as the original f:
+* */
 def curry[A, B, C](f: (A, B) => C): A => (B => C) =
-  ???
+  def curriedA (a: A): B => C = //A method that takes an A and returns a B => C
+    def curriedB (b: B): C = f(a, b) //A method that takes a B and returns a C
+    curriedB //we call the method that takes a B and returns a C
+  curriedA //we call the method that takes an A and returns a B => C
 
 def isSortedCurried[A]: Array[A] => ((A, A) => Boolean) => Boolean =
-  ???
+  curry(isSorted)
 
 // Exercise 6
-
 def uncurry[A, B, C](f: A => B => C): (A, B) => C =
-  ???
+  def uncurried (a: A, b: B): C = f(a)(b)
+  uncurried
 
 def isSortedCurriedUncurried[A]: (Array[A], (A, A) => Boolean) => Boolean =
-  ???
+  uncurry(isSortedCurried)
+
 
 // Exercise 7
-
 def compose[A, B, C](f: B => C, g: A => B): A => C =
-  ???
+  def composed (a: A): C = f(g(a))
+  //Vi returnere en enkelt funktion som tager en A og returnere en C. Vi kalder f(g(a)) for at lave vores A til en C
+  composed
