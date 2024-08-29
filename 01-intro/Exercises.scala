@@ -11,7 +11,7 @@ object MyModule:
   // Exercise 1
 
   def square(n: Int): Int =
-    ???
+    n * n
 
   private def formatAbs(x: Int): String =
     s"The absolute value of ${x} is ${abs(x)}"
@@ -30,7 +30,12 @@ end MyModule
 // Exercise 3
 
 def fib(n: Int): Int =
-  ???
+
+  def loop (acc: Int, current: Int, n: Int): Int =
+    if n == 0 then acc
+    else loop (current, acc + current, n - 1)
+
+  loop (0, 1, n)
 
 // Exercise 4
 
