@@ -1,0 +1,17 @@
+Run:
+scala-cli run . -M adpro.intro.printAbs
+
+
+Run with test:
+scala-cli test . -w
+
+Compile:
+scala-cli compile .
+
+Repl:
+scala-cli repl .
+
+
+Remove scala generated files:
+scala-cli clean .
+
