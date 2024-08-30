@@ -1,2 +1,2 @@
- git pull adpro     //Changes from teacher https://github.itu.dk/itu-square/2024-adpro
- git pull/push      //Own repo. https://github.com/Grumlebob/Scala_2024
+git pull adpro main --allow-unrelated-histories      //Changes from teacher https://github.itu.dk/itu-square/2024-adpro
+git pull/push      //Own repo. https://github.com/Grumlebob/Scala_2024
