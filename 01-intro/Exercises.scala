@@ -35,13 +35,13 @@ and square interactively. Store results in new values (using val).
 // Exercise 3
 def fib(n: Int): Int =
 
-  //Brugere bare en acc, istedet for tail-call optimisation
   @annotation.tailrec
-  def loop (acc: Int, current: Int, n: Int): Int =
-    if n == 0 then acc
-    else loop (current, acc + current, n - 1)
+  def loop(acc: Int, current: Int, loopCounter: Int): Int =
+    if loopCounter <= 1 then acc // Base case: F1 = 0
+    else loop(current, acc + current, loopCounter - 1)
+  loop(0, 1, n)
 
-  loop (0, 1, n)
+
 
 // Exercise 4
 def isSorted[A](as: Array[A], ordered: (A, A) => Boolean): Boolean =
