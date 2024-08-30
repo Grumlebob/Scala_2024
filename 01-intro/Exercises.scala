@@ -37,7 +37,6 @@ and square interactively. Store results in new values (using val).
 // Exercise 3
 def fib(n: Int): Int =
 
-  val something = 1
   @annotation.tailrec
   def loop(acc: Int, current: Int, loopCounter: Int): Int =
     if loopCounter <= 1 then acc // Base case: F1 = 0
@@ -50,7 +49,7 @@ def fib(n: Int): Int =
 
 // Exercise 4
 def isSorted[A](as: Array[A], ordered: (A, A) => Boolean): Boolean =
-  @tailrec
+  
   def loop(prevElement: A, array: Array[A]): Boolean =
     if array.isEmpty then true
     else if !ordered(prevElement, array(0)) then false
