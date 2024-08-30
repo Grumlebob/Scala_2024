@@ -1,5 +1,6 @@
 Run:
 scala-cli run . -M adpro.intro.printAbs
+Eller vs code med F5
 
 
 Run with test:
@@ -10,6 +11,12 @@ scala-cli compile .
 
 Repl:
 scala-cli repl .
+
+Lav en main til metoden såsom:
+@main def runFib: Unit =
+  println(fib(10))
+
+adpro.intro.runFib
 
 
 Remove scala generated files:

@@ -23,6 +23,8 @@ object MyModule:
   @main def printAbs: Unit =
     assert(magic - 84 == magic.-(84))
     println(formatAbs(magic - 100))
+    val diller = 1
+    println(s"Result is ${diller + 1}")
 
 end MyModule
 
@@ -35,12 +37,15 @@ and square interactively. Store results in new values (using val).
 // Exercise 3
 def fib(n: Int): Int =
 
+  val something = 1
   @annotation.tailrec
   def loop(acc: Int, current: Int, loopCounter: Int): Int =
     if loopCounter <= 1 then acc // Base case: F1 = 0
     else loop(current, acc + current, loopCounter - 1)
   loop(0, 1, n)
 
+@main def runFib: Unit =
+  println(fib(10))
 
 
 // Exercise 4
