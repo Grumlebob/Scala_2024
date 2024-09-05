@@ -22,3 +22,6 @@ adpro.intro.runFib
 Remove scala generated files:
 scala-cli clean .
 
+Run tests of only one exercise:
+scala-cli test . -- -f Ex01
+
