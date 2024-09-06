@@ -23,8 +23,6 @@ object MyModule:
   @main def printAbs: Unit =
     assert(magic - 84 == magic.-(84))
     println(formatAbs(magic - 100))
-    val diller = 1
-    println(s"Result is ${diller + 1}")
 
 end MyModule
 
@@ -54,11 +52,12 @@ def isSorted[A](as: Array[A], ordered: (A, A) => Boolean): Boolean =
     if array.isEmpty then true
     else if !ordered(prevElement, array(0)) then false
     else loop(array(0), array.drop(1))
+  
   //Start med head og tail som array. Hvis der er 0 eller 1 element er den altid sorteret.
   if as.isEmpty then true
   else
     if as.length == 1 then true
-    else loop(as(0), as.drop(1))
+    else loop(as(0), as.drop(1)) //This is same as head::tail from f#
 
 
 // Exercise 5
