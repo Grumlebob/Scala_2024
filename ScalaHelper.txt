@@ -1,4 +1,5 @@
 Run:
+scala-cli run .
 scala-cli run . -M adpro.intro.printAbs
 Eller vs code med F5
 
