@@ -98,7 +98,7 @@ their similarities. Reimplement them in terms of this more general function*/
 
   def maximum1(t: Tree[Int]): Int =
     //Ligesom maximum, vi bruger HOF max, for at tjekke left og right nodes 
-    val combineBranches: (Int, Int) => Int = 
+    val combineBranches: (Int, Int) => Int = //(int, int) => int er en tuple af input og int er output
       (left, right) => left.max(right)
     //Et leaf er bare selve værdien den holder.
     val transformLeaf: (value: Int) => Int = 
@@ -107,6 +107,7 @@ their similarities. Reimplement them in terms of this more general function*/
     fold(t)(combineBranches)(transformLeaf)
 
   def map1[A, B](t: Tree[A])(f: A => B): Tree[B] = 
+    
     //Branches sender vi videre til vores undernoder
     val combineBranches: (left: Tree[B], right: Tree[B]) => Tree[B] = 
       (left, right) => Branch(left, right)
