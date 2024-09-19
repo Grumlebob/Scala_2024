@@ -5,7 +5,7 @@ package adpro.option
 
 // Exercise 1
 
-trait OrderedPoint 
+trait OrderedPoint
   extends scala.math.Ordered[java.awt.Point]:
 
   this: java.awt.Point =>
@@ -228,7 +228,7 @@ map is too simple here.*/
     
 end Option
 
- 
+
 
 // Exercise that are outside the Option companion object
 
