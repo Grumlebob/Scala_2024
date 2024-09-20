@@ -58,6 +58,13 @@ package adpro.lazyList
   println("First 10 Fibonacci numbers using unfold:")
   LazyList.fibsUnfold.take(10).toList.foreach(println)
 
+  //Playground for fib
+  val k = 10
+  val left = LazyList.fibs.asInstanceOf[LazyList[Int]].drop(k)
+  val right = LazyList.fibsUnfold.asInstanceOf[LazyList[Int]].drop(k)
+  println(s"Comparing fibs and fibsUnfold from $k: ${left.take(80).toList == right.take(80).toList}")
+  
+
   // Exercise 13: mapUnfold, takeUnfold, takeWhileUnfold, zipWith
   printSeparator("13")
   println(s"Mapping *2 over first 10 naturals using unfold: ${naturals.mapUnfold(_ * 2).take(10).toList}")
@@ -448,13 +455,13 @@ object LazyList:
   /* Exercise 10
   Compute a lazy list of Fibonacci numbers fibs: 0, 1, 1, 2, 3, 5, 8, and so on
   */
-  lazy val fibs: LazyList[Int] = 
+  lazy val fibs: LazyList[BigInt] = 
     
-    def fib(current: Int, next: => Int): LazyList[Int] =
+    def fib(current: BigInt, next: => BigInt): LazyList[BigInt] =
       cons(current, fib(next, current + next))
     
     //first number is set as current, and next is set as next
-    fib(0, 1)
+    fib(BigInt(0), BigInt(1))
   
 
   /* Exercise 11
@@ -488,7 +495,6 @@ its finite prefix is equal to the corresponding prefix of naturals.
     // Initial state for the Fibonacci sequence: (0, 1)
     val initialState: (BigInt, BigInt) = (BigInt(0), BigInt(1))
     
-  
     def generateNextState(state: (BigInt, BigInt)): Option[(BigInt, (BigInt, BigInt))] =
       state match
         case (currentValue, nextValue) =>

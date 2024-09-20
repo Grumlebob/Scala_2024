@@ -268,6 +268,7 @@ object LazyListSpec
     forAll (Gen.choose(0, 1000)) { k =>
       val left = fibs.asInstanceOf[LazyList[Int]].drop(k)
       val right = fibsUnfold.asInstanceOf[LazyList[Int]].drop(k)
+      //if (left.headOption != right.headOption) println(s"diff at $k values: ${left.headOption} ${right.headOption}")
       left.headOption == right.headOption
     }
 
