@@ -249,9 +249,10 @@ Answer:
     
     def folder(ele: A, acc: => LazyList[A]): LazyList[A] =
       if p(ele) then cons(ele, acc)
+      //Når vi rammer empty, så stopper foldRight, på den måde kan vi ikke få [1,2,empty,4]
       else empty
 
-    foldRight(startAcc)(folder)
+    this.foldRight(startAcc)(folder)
 
 
   // Exercise 7[H]: Implement headOption using foldRight.
@@ -260,17 +261,18 @@ Answer:
 
     def folder(ele: A, acc: => Option[A]): Option[A] = Some(ele)
 
-    foldRight(startAcc)(folder)
+    this.foldRight(startAcc)(folder)
 
 
   // Exercise 8
   def map[B](transform: A => B): LazyList[B] = 
     val startAcc = empty[B]
     
-    def folder(element: A, tail: => LazyList[B]): LazyList[B] = 
-      cons(transform(element), tail)
+    def folder(element: A, acc: => LazyList[B]): LazyList[B] = 
+      cons(transform(element), acc)
     
-    foldRight(startAcc)(folder)
+    this.foldRight(startAcc)(folder)
+
 
   def filter(predicate: A => Boolean): LazyList[A] = 
     val startAcc = empty[A]
@@ -279,7 +281,7 @@ Answer:
       if predicate(element) then cons(element, tail)
       else tail
     
-    foldRight(startAcc)(folder)
+    this.foldRight(startAcc)(folder)
 
   /* 
    * The contsraint 'B >: A' requires that B is a
@@ -301,7 +303,7 @@ Answer:
     def folder(element: B, acc: => LazyList[B]): LazyList[B] = 
       cons(element, acc)
     
-    foldRight(startAcc)(folder)
+    this.foldRight(startAcc)(folder)
 
 
   def flatMap[B](transform: A => LazyList[B]): LazyList[B] = 
@@ -322,7 +324,7 @@ Answer:
       transformedList.foldRight(tail)(innerFolder)
 
     // Use foldRight to combine elements
-    foldRight(startAcc)(folder)
+    this.foldRight(startAcc)(folder)
 
 
   /*
@@ -346,13 +348,18 @@ The exam may contain open questions to be answered in English.)*/
   // Exercise 13
   def mapUnfold[B](f: A => B): LazyList[B] =
     // unfold to create a new LazyList by applying function 'f' to each element of the original LazyList
+
+    //Vores startstate er 'this' som er hele vores liste.
     LazyList.unfold(this) { 
       //Lambda function passed to unfold above
+      //Vores lambda til unfold, tager altid imod en state, og returnere en tuple af Some(element, NextState)
       currentList =>
+        //This is a function that takes a state, and returns next element and next state.
         currentList match {
           // If the current list is non-empty, apply 'f' to the head and and pass tail as the new state.
           case Cons(h, t) => 
 
+            //Next element: f(head), Next state: tail
             Some((f(h()), t()))
           // If the current list is empty, stop unfolding
           case Empty => None
@@ -360,13 +367,14 @@ The exam may contain open questions to be answered in English.)*/
     }
 
   def takeUnfold(n: Int): LazyList[A] = 
+    //Vores state er listen, samt hvor mange elementer vi vil tage
     LazyList.unfold((this, n)) {
+      //State er vores liste, samt n som er hvor mange elementer vi vil tage
       case (currentList, remaining) =>
         currentList match {
           
           // If The list has elements, and we're taking the last element (remaining == 1)
           case Cons(h, t) if remaining == 1 =>
-            
             // Include the current element and return an empty list for the next state,
             // so that upon next unfold, it will hit the 'case _ => None' and stop unfolding
             Some((h(), (empty, 0)))
@@ -375,19 +383,19 @@ The exam may contain open questions to be answered in English.)*/
           case Cons(h, t) if remaining > 1 =>
             Some((h(), (t(), remaining - 1)))
 
-          // Case 3:List empty. 
+          //List empty. 
           case _ => None
         }
     }
   
   def takeWhileUnfold(p: A => Boolean): LazyList[A] =
-    
+    //Vores state er listen
     LazyList.unfold(this) { 
       currentList =>
         currentList match 
           //If The list has elements, and the head satisfies the predicate
           case Cons(h, t) if p(h()) =>
-            //We include the head, and pass the tail as the currentList.
+            //Hvis predicate holder, er vores næste element head, og næste state tail
             Some((h(), t()))
 
           //If p(h) doesn't satisfy, or if list is empty. We stop unfolding
@@ -396,13 +404,15 @@ The exam may contain open questions to be answered in English.)*/
 
 
   def zipWith[B >: A, C](combine: (=> B, => B) => C)(otherList: LazyList[B]): LazyList[C] =
-    // Use unfold to combine elements of both lazy lists
-    LazyList.unfold((this, otherList)) { case (firstList, secondList) =>
+    //Vores state er liste 1 og liste 2
+    LazyList.unfold((this, otherList)) { 
+      case (firstList, secondList) =>
       (firstList, secondList) match {
         //If both lists have elements.
         case (Cons(head1, tail1), Cons(head2, tail2)) =>
-          // Apply the combine operation to the heads of the lists
-          // Use the tails of both lists for the next step, as firstList and secondList
+          //Next element: combine(head1, head2), 
+          //Next state: (tail1, tail2)
+
           Some((combine(head1(), head2()), (tail1(), tail2())))
 
         //If any of the lists are empty, we discard the rest of the elements
@@ -455,13 +465,13 @@ object LazyList:
   /* Exercise 10
   Compute a lazy list of Fibonacci numbers fibs: 0, 1, 1, 2, 3, 5, 8, and so on
   */
-  lazy val fibs: LazyList[BigInt] = 
+  lazy val fibs: LazyList[Int] = 
     
-    def fib(current: BigInt, next: => BigInt): LazyList[BigInt] =
+    def fib(current: Int, next: Int): LazyList[Int] =
       cons(current, fib(next, current + next))
     
     //first number is set as current, and next is set as next
-    fib(BigInt(0), BigInt(1))
+    fib(0, 1)
   
 
   /* Exercise 11
@@ -491,15 +501,17 @@ its finite prefix is equal to the corresponding prefix of naturals.
     
 
 
-  lazy val fibsUnfold: LazyList[BigInt] =
+
+  lazy val fibsUnfold: LazyList[Int] =
     // Initial state for the Fibonacci sequence: (0, 1)
-    val initialState: (BigInt, BigInt) = (BigInt(0), BigInt(1))
+    val initialState: (Int, Int) = (0, 1)
     
-    def generateNextState(state: (BigInt, BigInt)): Option[(BigInt, (BigInt, BigInt))] =
+    def generateNextState(state: (Int, Int)): Option[(Int, (Int, Int))] =
       state match
         case (currentValue, nextValue) =>
-          // Return the current value and the next state (nextValue, currentValue + nextValue)
-          //The next state is the currentvalue+nextValue
+          //Next state: (nextValue, currentValue + nextValue)
+          //Next iteration NextValue will be set to CurrentValue
+          //Our option contains NextElement and NextState
           Some((currentValue, (nextValue, currentValue + nextValue)))
     
     // Use unfold to generate the Fibonacci sequence
