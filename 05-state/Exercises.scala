@@ -26,22 +26,24 @@ object RNG:
       (n, nextRNG) 
 
 
-  // Exercise 1
-
   def nonNegativeInt(rng: RNG): (Int, RNG) = 
-    val (randomInt, nextRng) = rng.nextInt
-    val nonNegativeInt = if (randomInt < 0) -(randomInt + 1) else randomInt
-    (nonNegativeInt, nextRng)
+    rng.nextInt match
+      case (i, nextRng) if i < 0 =>
+        //+1 to handle edge case where i = Int.MinValue 
+        val nextElement = -(i + 1)
+        (nextElement, nextRng)
+      //if positive, just use the value
+      case (i, nextRng) => (i, nextRng)
+
   
 
 
   // Exercise 2
-
   def double(rng: RNG): (Double, RNG) = 
-    val (nonNegInt, nextRng) = nonNegativeInt(rng)  // Renamed the variable to nonNegInt
-    val randomDouble = nonNegInt.toDouble / (Int.MaxValue.toDouble + 1)
-    (randomDouble, nextRng)
-  
+    nonNegativeInt(rng) match
+      case (nonNegInt, nextRng) => 
+        val nextElement = nonNegInt.toDouble / (Int.MaxValue.toDouble + 1)
+        (nextElement, nextRng)
 
   
 
@@ -53,33 +55,30 @@ object RNG:
     ((nonNegInt, randomDouble), rng3)
   
 
-  def doubleInt(rng: RNG): ((Double, Int), RNG) = {
+  def doubleInt(rng: RNG): ((Double, Int), RNG) = 
     val (randomDouble, rng2) = double(rng)
     val (nonNegInt, rng3) = nonNegativeInt(rng2) 
     ((randomDouble, nonNegInt), rng3)
-  }
-
   
 
+  
 
   // Exercise 4
 
   def ints(count: Int)(rng: RNG): (List[Int], RNG) = 
+    //If count is 0, return empty list and rng
+    if count <= 0 then 
+      (List(), rng)
+    else
+      //else we get the nextElement and new state
+      val (previousList, newRng) = ints(count - 1)(rng)
+      //we generate a new integer
+      val (randomInt, nextRng) = newRng.nextInt
+      //We append new integer to our list, and pass new rng state.
+      (randomInt :: previousList, nextRng)
 
-    // Define the initial accumulator
-    val initialAccumulator: (List[Int], RNG) = (List(), rng)
-
-    // Define the folder function
-    def folder(currentCount: Int, acc: (List[Int], RNG)): (List[Int], RNG) = {
-      val (randomInt, nextRng) = acc._2.nextInt
-      (randomInt :: acc._1, nextRng)
-    }
-
-    // Perform the foldRight-like recursion (count is positive)
-    if (count <= 0) initialAccumulator
-    else folder(count - 1, ints(count - 1)(rng))
   
-
+    
   type Rand[+A] = RNG => (A, RNG)
 
   lazy val int: Rand[Int] = _.nextInt
@@ -105,55 +104,53 @@ object RNG:
   def map2[A, B, C](randomA: Rand[A], randomB: Rand[B])(combine: (A, B) => C): Rand[C] = 
     rng => {
       val (valueA, rng2) = randomA(rng)
+      //Use rng state from randomA
       val (valueB, rng3) = randomB(rng2)
-      (combine(valueA, valueB), rng3)
+      val nextElement = combine(valueA, valueB)
+      (nextElement, rng3)
     }
 
 
   // Exercise 7
   def sequence[A](randomGenerators: List[Rand[A]]): Rand[List[A]] = 
     
-    // Define the initial accumulator
+    //initial state
     val initialAccumulator: Rand[List[A]] = unit(List[A]())
     
-    // Define the folder function
-    def folder(randomGenerator: Rand[A], combinedRand: Rand[List[A]]): Rand[List[A]] = {
+    //Folder
+    def folder(randomGenerator: Rand[A], combinedRand: Rand[List[A]]): Rand[List[A]] = 
       map2(randomGenerator, combinedRand)(_ :: _)
-    }
-
-    // Perform the foldRight operation using the folder function
+    
     randomGenerators.foldRight(initialAccumulator)(folder)
 
 
-  def ints2(size: Int): Rand[List[Int]] = rng => {
+  def ints2(size: Int): Rand[List[Int]] = 
+    rng => 
+      def loop(count: Int, acc: (List[Int], RNG)): (List[Int], RNG) =
+        if count <= 0 then acc
+        else
+          val (randomInt, nextRng) = acc._2.nextInt
+          loop(count - 1, (randomInt :: acc._1, nextRng))
 
-    // Define the folder function that explicitly generates random integers
-    def folder(count: Int, acc: (List[Int], RNG)): (List[Int], RNG) = {
-      if (count <= 0) acc
-      else {
-        val (randomInt, nextRng) = acc._2.nextInt
-        folder(count - 1, (randomInt :: acc._1, nextRng))
-      }
-    }
-
-    // Use the folder to generate the list of integers
-    folder(size, (List(), rng))
-  }
+      loop(size, (List(), rng))
+  
 
 
   // Exercise 8
 
   def flatMap[A, B](randomValue: Rand[A])(nextRandomGenerator: A => Rand[B]): Rand[B] =
-    rng => {
+    rng => 
       val (value, rng2) = randomValue(rng)
       nextRandomGenerator(value)(rng2)
-    }
+    
+
 
   def nonNegativeLessThan(bound: Int): Rand[Int] = 
-    flatMap(nonNegativeInt) { nonNegativeInt =>
-      val mod = nonNegativeInt % bound
-      if (nonNegativeInt + (bound - 1) - mod >= 0) unit(mod) else nonNegativeLessThan(bound)
+    flatMap(nonNegativeInt) { nonNegInt =>
+      val mod = nonNegInt % bound
+      if nonNegInt + (bound - 1) - mod >= 0 then unit(mod) else nonNegativeLessThan(bound)
     }
+
 
 
 end RNG
@@ -198,7 +195,6 @@ object State:
   type Rand[A] = State[RNG, A]
 
   // Exercise 9 (sequence, continued)
- 
   def sequence[S, A](stateFunctions: List[State[S, A]]): State[S, List[A]] = 
 
     // Define the initial accumulator
@@ -236,15 +232,9 @@ object State:
   // Exercise 11 (lazyInts out of stateToLazyList)
   
   def lazyInts(rng: RNG): LazyList[Int] = 
-
-    // Properly construct a `State` that uses `RNG` and produces `Int`
     val stateFunction: State[RNG, Int] = State(_.nextInt)
-
-    // Use the `stateToLazyList` function to generate the LazyList of random integers
     stateToLazyList(stateFunction)(rng)
   
-
-
 
   lazy val tenStrictInts: List[Int] = 
     lazyInts(RNG.SimpleRNG(42)).take(10).toList
