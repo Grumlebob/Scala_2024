@@ -8,6 +8,7 @@ Eller vs code med F5
 
 Run with test:
 scala-cli test . -w
+scale-cli test . -- -f Ex02
 
 Compile:
 scala-cli compile .
