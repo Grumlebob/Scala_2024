@@ -6,6 +6,82 @@ package adpro.state
 import adpro.lazyList.LazyList
 import adpro.lazyList.LazyList.*
 
+@main def runAllExercises(): Unit =
+  def printSeparator(exerciseNumber: String): Unit =
+    println(s"\n===== Exercise $exerciseNumber =====")
+
+  // Initialize an RNG
+  val rng = RNG.SimpleRNG(42)
+
+  // Exercise 1: Testing nonNegativeInt
+  printSeparator("1: nonNegativeInt")
+  val (nonNegInt1, rng1) = RNG.nonNegativeInt(rng)
+  println(s"nonNegativeInt: $nonNegInt1")
+  
+  // Exercise 2: Testing double
+  printSeparator("2: double")
+  val (doubleValue, rng2) = RNG.double(rng1)
+  println(s"double: $doubleValue")
+
+  // Exercise 3: Testing intDouble and doubleInt
+  printSeparator("3: intDouble and doubleInt")
+  val ((intValue1, doubleValue2), rng3) = RNG.intDouble(rng2)
+  println(s"intDouble: (Int: $intValue1, Double: $doubleValue2)")
+  
+  val ((doubleValue3, intValue2), rng4) = RNG.doubleInt(rng3)
+  println(s"doubleInt: (Double: $doubleValue3, Int: $intValue2)")
+
+  // Exercise 4: Testing ints
+  printSeparator("4: ints")
+  val (intList, rng5) = RNG.ints(5)(rng4)
+  println(s"ints (5 random ints): $intList")
+
+  // Exercise 5: Testing double2
+  printSeparator("5: double2")
+  val (double2Value, rng6) = RNG.double2(rng5)
+  println(s"double2: $double2Value")
+
+  // Exercise 6: Testing map2 with two random generators
+  printSeparator("6: map2")
+  val randIntDouble = RNG.map2(RNG.nonNegativeInt, RNG.double)((i, d) => (i, d))
+  val ((mappedInt, mappedDouble), rng7) = randIntDouble(rng6)
+  println(s"map2 (Int, Double): (Int: $mappedInt, Double: $mappedDouble)")
+
+  // Exercise 7: Testing sequence
+  printSeparator("7: sequence")
+  val randList = List.fill(5)(RNG.int)
+  val randSeq = RNG.sequence(randList)
+  val (seqResult, rng8) = randSeq(rng7)
+  println(s"sequence (List of 5 random ints): $seqResult")
+
+  // Exercise 8: Testing nonNegativeLessThan
+  printSeparator("8: nonNegativeLessThan(10)")
+  val (nonNegLessThanValue, rng9) = RNG.nonNegativeLessThan(10)(rng8)
+  println(s"nonNegativeLessThan: $nonNegLessThanValue")
+
+  // Exercise 9: State - Testing sequence of State actions
+  printSeparator("9: State.sequence")
+  val stateActions = List(State.get[RNG], State.get[RNG], State.get[RNG])
+  val combinedStateAction = State.sequence(stateActions)
+  val (stateResult, _) = combinedStateAction.run(rng9)
+  println(s"State.sequence: List of RNGs returned")
+
+  // Exercise 10: Testing stateToLazyList
+  printSeparator("10: stateToLazyList")
+  val stateFunction = State[RNG, Int](_.nextInt)
+  val lazyList = State.stateToLazyList(stateFunction)(rng)
+  println(s"stateToLazyList (First 5 random numbers from LazyList): ${lazyList.take(5).toList}")
+
+  // Exercise 11: Testing lazyInts
+  printSeparator("11: lazyInts")
+  val lazyInts = State.lazyInts(rng)
+  println(s"lazyInts (First 5 random ints): ${lazyInts.take(5).toList}")
+
+  // Exercise 12: Testing tenStrictInts
+  printSeparator("12: tenStrictInts")
+  println(s"tenStrictInts: ${State.tenStrictInts}")
+
+
 
 trait RNG:
   /** Generate a random `Int`. We define other functions using `nextInt`. */
@@ -100,7 +176,7 @@ object RNG:
 
 
   // Exercise 6
-
+  // kinda like zip.
   def map2[A, B, C](randomA: Rand[A], randomB: Rand[B])(combine: (A, B) => C): Rand[C] = 
     rng => {
       val (valueA, rng2) = randomA(rng)
@@ -139,9 +215,13 @@ object RNG:
   // Exercise 8
 
   def flatMap[A, B](randomValue: Rand[A])(nextRandomGenerator: A => Rand[B]): Rand[B] =
+    //Rand[B] is a function that takes a RNG and returns a tuple of B and RNG
+    //so we start with a lambda with input rng and return a tuple of B and RNG
+    //We return this lambda.
     rng => 
       val (value, rng2) = randomValue(rng)
-      nextRandomGenerator(value)(rng2)
+      val nextRandFunction = nextRandomGenerator(value)
+      nextRandFunction(rng2)
     
 
 
