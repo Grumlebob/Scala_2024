@@ -54,7 +54,10 @@ object LazyListSpec
     forAll { (n: Int) => cons(n,empty).headOption == Some(n) } :| "singleton" &&
     forAll { (s: LazyList[Int]) => s.headOption != None }      :| "random" 
 
-  // Exercise 2
+  /*
+  Exercise 2[M]. Test the following property: headOption does not force the tail of a lazy list.
+From now on, we do not provide buggy implementations for your tests. This is like in reality: when
+writing tests you need to figure out yourself whether they test the property you wanted.*/
   property("Ex02: headOption does not force the tail") = 
     //head is 1, which is not dangerous
     //tail is exception, which is dangerous, so if it is forced we will also get an error!
@@ -62,7 +65,7 @@ object LazyListSpec
     //We shouldn't get an error, as only head should be forced.
     dangerousTail.headOption == Some(1)
 
-  // Exercise 3
+  //Exercise 3[M]. Test that take does not force any heads nor any tails of the lazy list it manipulates.
   property("Ex03: take does not force any heads or tails") =
     //Both head and tail are exceptions, so if forced the test will fail. 
     val dangerousList = cons(throw new RuntimeException("Head forced"), cons(throw new RuntimeException("Tail forced"), empty))
@@ -70,7 +73,11 @@ object LazyListSpec
     dangerousList.take(1)
     true // Test passes if no exception is thrown
 
-// Exercise 4
+/*
+Exercise 4 [M]. In this and the in the following exercises, the numbers n and m are assumed to be
+non-negative. Test that take(n) does not force the (n+1)st head ever (even if we force all elements
+of take(n)).
+*/
   property("Ex04: take(n) does not force the (n+1)st head") = 
     given Arbitrary[LazyList[Int]] = Arbitrary(genNonEmptyLazyList[Int])
 
@@ -118,7 +125,7 @@ object LazyListSpec
 
 
 
-  // Exercise 6
+  //Exercise 6[E]. Test that l.drop(n).drop(m) == l.drop(n+m) for any n, m.
   property("Ex06: drop(n).drop(m) == drop(n + m) with length check") = 
     given Arbitrary[LazyList[Int]] = Arbitrary(genNonEmptyLazyList[Int])
 
@@ -136,7 +143,9 @@ object LazyListSpec
   }
 
 
-  // Exercise 7
+  /*
+  Exercise 7 [M]. Test that l.drop(n) does not force any of the dropped elements (heads). This
+  should hold even if we force some element in the tail.*/
   property("Ex07: drop(n) does not force any of the dropped elements with length check") = 
     given Arbitrary[LazyList[Int]] = Arbitrary(genNonEmptyLazyList[Int])
 
@@ -161,7 +170,9 @@ object LazyListSpec
   }
 
 
-  // Exercise 8
+/*
+Exercise 8[M]. Test that l.map(identity) == l for any lazy list l. Here identity is the identity
+function.*/
   property("Ex08: Mapping identity over a LazyList should not change the list. map(identity) == l") = 
     given Arbitrary[LazyList[Int]] = Arbitrary(genNonEmptyLazyList[Int])
 
@@ -172,7 +183,8 @@ object LazyListSpec
     }
 
 
-  // Exercise 9
+  //Exercise 9[M]. Test that map terminates on infinite lazy lists.
+  /*Version 1: works, but not as clean
   property("Ex09: map terminates lazily on infinite lists") = 
     // Generate an infinite list
     val infiniteList = infiniteLazyList[Int].sample.get
@@ -180,17 +192,25 @@ object LazyListSpec
     infiniteList.map(_ + 1)
     //If it terminates, we will reach this true.
     true
+    */
+  //Version 2: cleaner
+  property("Ex09: map terminates lazily on infinite lists") =
+    given Arbitrary[LazyList[Int]] = Arbitrary(infiniteLazyList[Int])
+
+    forAll { (lst: LazyList[Int]) =>
+      // Map the infinite list to a new list, but don't force the evaluation
+      lst.map(_ + 1)
+      true // Test passes if no exception is thrown
+    }
 
   // Exercise 10.01
   property("Ex10.01: append with empty list returns the original list (comparing contents)") = 
     given Arbitrary[LazyList[Int]] = Arbitrary(genNonEmptyLazyList[Int])
 
-    forAll { (lst: LazyList[Int]) =>
-      // Convert the original LazyList and the result of appending `empty` to `List` for comparison
-      lst.append(empty).toList == lst.toList
-  }
-
-
+    // Convert the original LazyList and the result of appending `empty` to `List` for comparison
+    forAll { (lst: LazyList[Int]) => lst.append(empty).toList == lst.toList } :| "list append empty" &&
+    forAll { (lst: LazyList[Int]) => empty.append(lst).toList == lst.toList } :| "empty.append list"
+    
   // Exercise 10.02
   property("Ex10.02: Appending two lists should preserve the order of elements (comparing contents)") = 
     given Arbitrary[LazyList[Int]] = Arbitrary(genNonEmptyLazyList[Int])

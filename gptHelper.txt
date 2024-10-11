@@ -1,8 +1,32 @@
+
+I prefer readability.
 I like each calculation to have their own val/ def / line of code, if possible.
 Meaning to use intermediate variables:
-So tuples should be example
+So returned tuples should for example be:
 NextElement =...
 NextState =...
 (NextElement, NextState)
 
-I prefer: se et slide med at hof er godt. 
+I prefer clearly named variables, such as countOfStudents instead of 'n'
+
+I have different rankings of how much the teacher likes different coding styles:
+BEST:
+variables using val
+value bindings
+expression values
+parametric polymorphism
+Composed dedicated higher order functions
+Using dedicated API if possible such as State
+Options or Either monad
+
+MIDDLE:
+simple recursion.
+folds
+if condition / pattern matching 
+
+WORST:
+variables using var
+Return statement
+any/object type
+loops
+exceptions
