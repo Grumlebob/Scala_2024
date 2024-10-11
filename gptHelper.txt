@@ -1,0 +1,8 @@
+I like each calculation to have their own val/ def / line of code, if possible.
+Meaning to use intermediate variables:
+So tuples should be example
+NextElement =...
+NextState =...
+(NextElement, NextState)
+
+I prefer: se et slide med at hof er godt. 
