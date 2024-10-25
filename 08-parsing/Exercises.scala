@@ -52,7 +52,7 @@ trait Parsers[ParseError, Parser[+_]]:
     // can be type checked, when we compile.  This tells us that the
     // construction of the laws is type-correct (the first step for them
     // passing).
-
+    
     val runChar = forAll { (c: Char) => char(c).run(c.toString) == Right(c) }
 
     val runString = forAll { (s: String) => string(s).run(s) == Right(s) }
@@ -172,20 +172,29 @@ trait Parsers[ParseError, Parser[+_]]:
 
   end Laws
 
-  // Exercise 1
-
+  // Exercise 1 Implement product and map2 using flatMap.
   extension [A](p1: Parser[A]) 
-    def map2[B, C](p2: => Parser[B]) (f: (A, B) => C): Parser[C] =
-      ???
+    def map2[B, C](p2: => Parser[B])(combine: (A, B) => C): Parser[C] =
+      p1.flatMap { resultA =>
+        p2.map { resultB =>
+          val combinedResult = combine(resultA, resultB)
+          combinedResult
+        }
+      }
 
-    def product[B] (p2: => Parser[B]): Parser[(A,B)] =
-      ???
+    def product[B](p2: => Parser[B]): Parser[(A, B)] =
+      p1.flatMap { resultA =>
+        p2.map { resultB =>
+          (resultA, resultB)
+        }
+      }
+
 
     // Write here: 
     //
-    // (1) ...
+    // (1) The type parameter A is not explicitly declared in the signatures of map2 and product because it is implicitly inferred from the first parser argument.
     //
-    // (2) ...
+    // (2) The second argument p2: => Parser[B] is passed by-name to allow lazy evaluation of the second parser. By making p2 a by-name parameter, it ensures that the second parser is only evaluated if the first parser (p1, which map2 is called on) succeeds.
 
     def **[B](p2: => Parser[B]): Parser[(A, B)] = 
       p1.product(p2)
@@ -199,42 +208,69 @@ trait Parsers[ParseError, Parser[+_]]:
       p1.many
   end extension
 
-  // Exercise 2
+  /* Exercise 2
+  Use succeed and map2 to implement the combinator many. This combinator continues
+to parse using p as long as it succeeds and puts the results in a list. The last (the rightmost) parsed
+element is the head of the list after parsing.
+  */
 
   extension [A](p: Parser[A]) 
-    def many: Parser[List[A]] = 
-      ???
+    def many: Parser[List[A]] =
+      p.flatMap { head =>
+        p.many.map(tail => head :: tail)
+      }.or(succeed(Nil))
 
-  // Exercise 3
 
-  extension [A](p: Parser[A])
-    def map[B](f: A => B): Parser[B] =
-      ???
+  // Exercise 3 Express map using flatMap
+  extension [A](parser: Parser[A])
+    def map[B](transform: A => B): Parser[B] =
+      parser.flatMap { result =>
+        val transformedResult = transform(result)
+        succeed(transformedResult)
+      }
 
-  // Exercise 4
+
+  // Exercise 4. Use many and map to implement a parser manyA that recognizes zero or more consecutive
+  //’a’ characters and returns the number of matched characters
 
   // A better name would be: howManyA
   def manyA: Parser[Int] =
-    ???
+    val parserA = char('a')
+    val parsedAList = parserA.many
+    parsedAList.map(_.size)
 
-  // Exercise 5
-  
-  extension [A](p: Parser[A]) 
+
+  // Exercise 5. Implement many1, a parser that matches its argument 1 or more times
+  extension [A](parser: Parser[A]) 
     def many1: Parser[List[A]] =
-      ???
+      val atLeastOneParser = parser.map2(parser.many)(_ :: _)
+      atLeastOneParser
       
-  // Write here ...
+  /*
+  In the context of the parser combinators, many1 is an extension method because it operates on a specific parser instance and enhances its behavior without modifying the underlying parser class directly. In functional programming, it is common to use extension methods to add functionality to a type without altering the original type’s definition.*/
 
-  // Exercise 6
+  // Exercise 6. Using map2 and succeed, implement the combinator listOfN:
+  extension [A](parser: Parser[A]) 
+    def listOfN(countOfElements: Int): Parser[List[A]] =
+      if countOfElements <= 0 then succeed(Nil)
+      else
+        val firstElementParser = parser
+        val restElementsParser = parser.listOfN(countOfElements - 1)
+        firstElementParser.map2(restElementsParser)(_ :: _)
 
-  extension [A](p: Parser[A]) 
-    def listOfN(n: Int): Parser[List[A]] =
-      ???
 
   // Exercise 7
-
+  /*
+  Using flatMap write the parser that parses a single digit, and then as many occurrences
+of the character ’a’ as was the value of the digit. Your parser should be named digitTimesA and
+return the value of the digit parsed (thus one less the number of characters consumed).*/
   def digitTimesA: Parser[Int] =
-    ???
+    val digitParser = regex("[0-9]".r)
+    digitParser.flatMap { digit =>
+      val parsedDigit = digit.toInt
+      char('a').listOfN(parsedDigit).map(_.size) // Expect exactly `parsedDigit` 'a's
+    }
+
 
   // For Exercise 8 read the code below until you find it.
 
@@ -412,12 +448,21 @@ object Sliceable
   import Result.{Slice, Success, Failure}
 
   // Exercise 8
+  //As a warmup, answer (for yourself)
+  //the following question: why do we have to make the Parser type covariant here?
+  /*
+  Making Parser covariant allows for greater flexibility in composing and reusing parsers by permitting parsers of specific types (e.g., Parser[String], Parser[Int]) to be used in more general contexts (e.g., Parser[Any])
+  */
 
   /** Consume no characters and succeed with the given value */
-  def succeed[A](a: A): Parser[A] =
-    ???
+  def succeed[A](value: A): Parser[A] =
+    (state: ParseState) => Success(value, 0)
+
 
   // For Exercise 9 continue reading below
+  /*
+  Implement the combinator or that takes two parsers as arguments and tries them sequentially.
+The second parser is only tried, if the first one failed.*/
 
   def string(w: String): Parser[String] = (s: ParseState) =>
     val i = firstNonmatchingIndex(s.loc.input, w, s.loc.offset)
@@ -473,15 +518,42 @@ object Sliceable
   end extension
 
   // Exercise 9
+  /*
+  Implement the combinator or that takes two parsers as arguments and tries them sequentially.
+  The second parser is only tried, if the first one failed.
+*/
  
-  extension [A](p: Parser[A]) 
-    def or(p2: => Parser[A]): Parser[A] =
-      ???
+  extension [A](parser1: Parser[A]) 
+    def or(parser2: => Parser[A]): Parser[A] =
+      (state: ParseState) =>
+        val firstParserResult = parser1(state)
+        firstParserResult match
+          case failure @ Failure(_, false) => parser2(state)
+          case otherResult => otherResult
+
 
   // Exercise 10
+  /*
+  In Scala, a string s can be promoted to a Regex object (which has methods for matching)
+using the method call s.r, for instance, "[a-zA-Z_][a-zA-Z0-9_]*".r.
+Implement a new primitive, regex, which promotes a regular expression to a parser:*/
 
-  def regex(r: Regex): Parser[String] = (s: ParseState) =>
-    ???
+  def regex(pattern: Regex): Parser[String] = (state: ParseState) =>
+    val inputRemaining = state.loc.remaining
+    val matchedPrefix = pattern.findPrefixOf(inputRemaining)
+
+    matchedPrefix match
+      case Some(matched) =>
+        val lengthConsumed = matched.length
+        if state.isSliced then
+          Slice(lengthConsumed)  // Return only the length if sliced
+        else
+          Success(matched, lengthConsumed)  // Return matched string and length if not sliced
+      case None =>
+        val parseError = state.loc.toError(s"Expected pattern: $pattern")
+        Failure(parseError, isCommitted = false)
+
+
    
 end Sliceable
 
@@ -506,58 +578,177 @@ class JSONParser[ParseError, Parser[+_]](P: Parsers[ParseError,Parser]):
   import JSON.*
 
   // Exercise 11
+  /*
+  Implement:
+• QUOTED – a Parser[String] that matches a quoted string literal, and returns the value of the
+string (without the syntactic quotes)
+• DOUBLE – a Parser[Double] that matches a double number literal, and returns its numeric value
+• ws – a Parser[Unit] that matches a non-empty sequence of white space characters
+*/
 
   lazy val QUOTED: Parser[String] =
-    ???
+    val quotePattern = "\"[^\"]*\"".r
+    regex(quotePattern).map { matched =>
+      val contentWithoutQuotes = matched.drop(1).dropRight(1)
+      contentWithoutQuotes
+    }
+
 
   lazy val DOUBLE: Parser[Double] =
-    ???
+    val doublePattern = "[-+]?([0-9]*\\.[0-9]+([eE][-+]?[0-9]+)?|[0-9]+)".r
+    regex(doublePattern).map { matched =>
+      val parsedDouble = matched.toDouble
+      parsedDouble
+    }
 
   lazy val ws: Parser[Unit] =
-    ???
+    val whitespacePattern = "\\s+".r  // Matches one or more whitespace characters
+    regex(whitespacePattern).map(_ => ())
 
-  // Exercise 13
+
+
+  // Exercise 12 
+  /*
+• jnull – matches the literal null and returns JNull
+• jbool – matches literals true and false and returns JBool
+• jstring – wraps the result of QUOTED in a JString value
+• jnumber – wraps the result of DOUBLE in a JNumber value
+
+*/
   
   lazy val jnull: Parser[JSON] =
-    ???
+    string("null").map(_ => JNull)
+
 
   lazy val jbool: Parser[JSON] =
-    ???
+    val trueParser = string("true").map(_ => JBool(true))
+    val falseParser = string("false").map(_ => JBool(false))
+    trueParser or falseParser
+
 
   lazy val jstring: Parser[JString] =
-    ???
+    QUOTED.map { content =>
+      JString(content)
+    }
+
 
   lazy val jnumber: Parser[JNumber] =
-    ??? 
+    DOUBLE.map { number =>
+      JNumber(number)
+    }
+
 
   // Exercise 13
+  /*
+  • jarray – parses an array literal: a comma-separated list of JSON values, surrounded by a pair of
+square brackets
+• field – parses a JSON object field: a quoted field name, followed by a colon token, followed by a
+JSON value. It produces a field name–value pair, that will later be used to construct an object
+• jobject – parses a JSON object: a comma-separated list of fields, surrounded by a pair of braces.
+• json that parses an arbitrary JSON value is already implemented in the template file
+*/
 
-  private lazy val commaSeparatedVals: Parser[List[JSON]] =
-    ???
+  // A parser that matches and skips optional whitespace
+  lazy val optWs: Parser[Unit] = regex("\\s*".r).map(_ => ())
 
+  private lazy val commaSeparatedVals: Parser[List[JSON]] = 
+    (for {
+      first <- json
+      _     <- optWs
+      rest  <- (for {
+                  _    <- string(",")
+                  next <- commaSeparatedVals
+                } yield next).or(succeed(Nil))
+    } yield first :: rest).or(succeed(Nil))
+
+
+  // Parser for JSON arrays (handles optional commas between values, no trailing commas)
   lazy val jarray: Parser[JArray] =
-    ???
+    for {
+      _      <- string("[")
+      _      <- optWs // Optional whitespace after opening bracket
+      values <- commaSeparatedVals.or(succeed(Nil)) // Comma-separated values or empty array
+      _      <- optWs.flatMap(_ => string("]")) // Ensure the closing bracket is handled
+    } yield JArray(values.toVector)
 
-  lazy val field: Parser[(String,JSON)] =
-    ???
+  lazy val field: Parser[(String, JSON)] = 
+    for {
+      key   <- QUOTED
+      _     <- optWs
+      _     <- string(":")
+      _     <- optWs
+      value <- json
+    } yield (key, value)
 
-  private lazy val commaSeparatedFields: Parser[List[(String,JSON)]] =
-    ???
 
+  private lazy val commaSeparatedFields: Parser[List[(String, JSON)]] = 
+    for {
+      first <- field
+      _     <- optWs
+      rest  <- (for {
+                  _    <- string(",")
+                  _    <- optWs
+                  more <- commaSeparatedFields
+                } yield more).or(succeed(Nil))
+    } yield first :: rest
+
+
+  // Parser for JSON objects (handles optional commas between fields, no trailing commas)
   lazy val jobject: Parser[JObject] =
-    ???
+    for {
+      _      <- string("{")
+      _      <- optWs // Optional whitespace after opening brace
+      fields <- commaSeparatedFields.or(succeed(Nil)) // Comma-separated fields or empty object
+      _      <- optWs.flatMap(_ => string("}")) // Ensure the closing brace is handled
+    } yield JObject(fields.toMap)
 
-  lazy val json: Parser[JSON] =
-    ???
 
+  // Top-level JSON parser
+  lazy val json: Parser[JSON] = 
+    for {
+      _ <- optWs
+      j <- string("null").map(_ => JNull) or jbool or jnumber or jstring or jarray or jobject
+      _ <- optWs
+    } yield j
+
+
+
+    
   // Exercise 14 (no code)
+
+  //see main method runJsonTest() below
 
   // Exercise 15
   //
   // Write here:
   //
-  // (1) ...
+  // (1). They don’t depend on any concrete implementation of the parsers but express expected behavior that all implementations must satisfy. Therefore, the laws can be type-checked without needing a concrete implementation.
   //
-  // (2) ...
-
+  // (2). The main advantage is reusability: all concrete implementations of Parsers can be tested against the same set of laws, ensuring consistency and correctness. It also provides type-safety and encourages early validation of the expected behavior, making it easier to implement and verify parsers consistently.
 end JSONParser
+
+
+//To test exercise 13/14
+@main def runJsonTest(): Unit = 
+  import Sliceable.*
+
+  val jsonTxt = """
+  {
+    "Company name" : "Microsoft Corporation",
+    "Ticker"  : "MSFT",
+    "Active"  : true,
+    "Price"   : 30.66,
+    "Shares outstanding" : 8.38e9,
+    "Related companies" : [ "HPQ", "IBM", "YHOO", "DELL", "GOOG" ]
+  }
+  """
+
+  // Instantiate the parser
+  val jsonParser = new JSONParser(Sliceable)
+
+  // Run the parser on the JSON string
+  val result = jsonParser.json.run(jsonTxt)
+
+  // Print the result of the parsing
+  println(s"Parsing result: $result")
+

@@ -204,6 +204,7 @@ object ParsingSpec
     string("a").many1.run("aaaxa") == Right(List("a", "a", "a"))
 
   // Exercise 6 (listOfN)
+  
 
   property("Ex06.01: listOfN 1") = Laws.listOfN1
 
@@ -503,5 +504,5 @@ object ParsingSpec
     p(ParseState(Location("xabraabracadabra", 1)))
       == Success(List("abra", "abra"), 8)
 
-
+  
 end ParsingSpec
