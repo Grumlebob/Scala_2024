@@ -31,5 +31,17 @@ any/object type
 loops
 exceptions
 
-I will provide you with a custom implementation of some libraries, i want you to use those.
+I will provide you with a custom implementation of some libraries, i want you to use those if provided.
 Remember that all implementation should happen in the exam.scala file, so please don't invent new methods for the custom library implementations.
+
+If a full signature is provided such as:
+lazy val intAddition: Monoid[Int] = ???
+Don't then change it to:
+val intAddition: Monoid[Int] = 
+In other words, don't try to change the skeleton requirements, if they are set.
+But you are allowed to change parameternames to something meaningful:
+def someName(f: A => B): Int =
+def someName(transform: A => B): Int =
+Except if it is a string in a property, then maintain the string as is:
+property("Ex14.02: optionFunctor satisfies map law (tests Exercise 13)") =
+property("Ex14.02: optionFunctor satisfies map law (tests Exercise 13)") =
