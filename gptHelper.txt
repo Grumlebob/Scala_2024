@@ -30,3 +30,6 @@ Return statement
 any/object type
 loops
 exceptions
+
+I will provide you with a custom implementation of some libraries, i want you to use those.
+Remember that all implementation should happen in the exam.scala file, so please don't invent new methods for the custom library implementations.
