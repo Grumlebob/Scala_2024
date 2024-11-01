@@ -7,7 +7,12 @@ NextElement =...
 NextState =...
 (NextElement, NextState)
 
-I prefer clearly named variables, such as countOfStudents instead of 'n'
+If you use a foldRight/Left, i like to have it split into intermediate steps like:
+val initAcc = ...
+def folder = ...
+list.foldRight(initAcc)(folder)
+
+I prefer clearly named variables and parameters, such as countOfStudents instead of 'n'
 
 I have different rankings of how much the teacher likes different coding styles:
 BEST:
@@ -45,3 +50,4 @@ def someName(transform: A => B): Int =
 Except if it is a string in a property, then maintain the string as is:
 property("Ex14.02: optionFunctor satisfies map law (tests Exercise 13)") =
 property("Ex14.02: optionFunctor satisfies map law (tests Exercise 13)") =
+Also maintain the names of the methods.

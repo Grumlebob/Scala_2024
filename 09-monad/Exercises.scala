@@ -100,6 +100,8 @@ def optionMonoidLift[A: Monoid]: Monoid[Option[A]] = new Monoid[Option[A]] {
 
 
 // Exercise 3
+//function having the same argument and return type is called an endofunction.
+//Write a monoid instance for endofunctions
 // Endofunction Monoid: combining functions using composition
 def endoMonoid[A]: Monoid[A => A] = new Monoid[A => A] {
   val empty: A => A = identity
@@ -107,7 +109,7 @@ def endoMonoid[A]: Monoid[A => A] = new Monoid[A => A] {
 }
 
 
-// Exercise 4 (tests exercises 1-2, written by student)
+// Exercise 4 (tests exercises 1-2)
 
 object MonoidEx4Spec extends org.scalacheck.Properties("exerc4"):
 
@@ -129,8 +131,13 @@ end MonoidEx4Spec
 // and forth in the file. (This naturally belongs to the Monoid trait).
 
 extension [B](mb: Monoid[B])
-  def foldMap[A](as: List[A])(f: A => B): B =
-    as.foldLeft(mb.empty)((acc, a) => mb.combine(acc, f(a)))
+  def foldMap[A](as: List[A])(f: A => B): B = {
+    val initAcc = mb.empty
+    def folder(acc: B, a: A): B = mb.combine(acc, f(a))
+    
+    as.foldLeft(initAcc)(folder)
+  }
+
 
 
 
@@ -140,7 +147,11 @@ extension [B](mb: Monoid[B])
  * and forth in the file. (This naturally belongs to the Monoid trait).
  *
  * The triple equality (===) uses the Equality instance to check equality
- * (by default the same as == but we can override it). */
+ * (by default the same as == but we can override it). 
+ *
+ * Write property-based tests that test whether a function is a homomorphism between two
+  sets, and then combine them in the test of isomorphism. 
+ */
 
 extension [A: Arbitrary: Equality](ma: Monoid[A])
 
@@ -155,6 +166,12 @@ extension [A: Arbitrary: Equality](ma: Monoid[A])
 
 
 // Exercise 7 (tests for Exercise 6, written by the student)
+/*
+Use the laws from the tests in the previous exercises to establish an isomorphism between String and
+List[Char] (or more precisely their monoids). Both monoids are already implemented above in the
+file. A string can be translated to a list of characters using the toList method. The List.mkString
+method with default arguments (no arguments) does the opposite conversion.
+*/
 
 object MonoidEx7Spec extends org.scalacheck.Properties("exerc7"):
 
@@ -171,6 +188,10 @@ end MonoidEx7Spec
 
 
 // "Exercise 8 (tests for Exercise 1, written the by student)
+/*
+Use the morphism laws from Exercise 6 to show that the two Boolean monoids from
+Exercise 1 above are isomorphic via the negation function (!).
+*/
 
 object MonoidEx8Spec extends org.scalacheck.Properties("exerc8"):
   
@@ -185,6 +206,7 @@ end MonoidEx8Spec
 
 
 // Exercise 9
+//Implement a productMonoid that builds a monoid out of two monoids.
 
 def productMonoid[A, B](ma: Monoid[A])(mb: Monoid[B]): Monoid[(A, B)] = new Monoid[(A, B)] {
   val empty = (ma.empty, mb.empty)
@@ -193,6 +215,13 @@ def productMonoid[A, B](ma: Monoid[A])(mb: Monoid[B]): Monoid[(A, B)] = new Mono
 
 
 // Exercise 10 (tests for Exercise 9, written by the student)
+/*
+Test productMonoid using our monoid laws and Scalacheck. You need to provide
+some concrete types for testing the product. We do not have generators of arbitrary monoids, so we
+cannot quantify over them in the test. Instead, we can compose some concrete types, for instance
+Option[Int] monoid with List[String] monoid. Run the resulting product monoid through our
+monoid laws. You should not need to write any new laws. Just reuse the existing ones.
+*/
 
 object MonoidEx10Spec extends org.scalacheck.Properties("exer10"):
   
@@ -235,11 +264,16 @@ trait Foldable[F[_]]:
 end Foldable
 
 // Exercise 11
+//Implement Foldable[List].
 
 given foldableList: Foldable[List] with
   extension [A](as: List[A])
-    def foldMap[B](transform: A => B)(using mb: Monoid[B]): B =
-      as.foldLeft(mb.empty)((acc, a) => mb.combine(acc, transform(a)))
+    def foldMap[B](transform: A => B)(using mb: Monoid[B]): B = {
+      val initAcc = mb.empty
+      def folder(acc: B, a: A): B = mb.combine(acc, transform(a))
+
+      as.foldLeft(initAcc)(folder)
+    }
 
 
  
@@ -247,10 +281,19 @@ given foldableList: Foldable[List] with
 
 // Note since Foldable[F] is a given, its extensions for as are visible
 // (https://docs.scala-lang.org/scala3/reference/contextual/extension-methods.html)
+/*
+
+Any Foldable structure can be turned into a List. Write this conversion in a
+generic way for any F[_]: Foldable and any A*/
 
 extension [F[_]: Foldable, A] (as: F[A])
   def toList: List[A] = as.toListF
-  def toListF: List[A] = as.foldMap(List(_))(using listMonoid[A])
+  def toListF: List[A] = {
+    val initAcc = List.empty[A]
+    def folder(acc: List[A], a: A): List[A] = a :: acc
+    
+    as.foldMap(List(_))(using listMonoid[A]).reverse
+  }
 
 
 
@@ -284,7 +327,7 @@ end Functor
 
 
 // Exercise 13
-
+//Implement an instance Functor[Option] of Functor for Option.
 lazy val optionFunctor: Functor[Option] = new Functor[Option] {
   extension [A](fa: Option[A])
     def map[B](transform: A => B): Option[B] = fa.map(transform)
@@ -304,6 +347,19 @@ object FunctorEx14Spec
     listFunctor.functorLaws.map[Int]
 
   // Exercise 14
+  /*
+  Find the object functorLaws in the Functor trait (type class) and analyze how
+the map law is implemented there, in a way that it can be used for any functor instance. The law
+holds for any type A and a type constructor F[_], if we can generate arbitrary values of F[A] and test
+for equality of F[A] values. Recall that Scalacheck needs to know that there exists an instance of
+Arbtirary for F[A] in order to be able to generate random instances. And we need a way to test
+equality to execute the property itself (the built-in equality == may not be suitable for all types, for
+instance functions).
+Below we show how to use the law to test that the ListFunctor is a functor (over integer lists). Note
+that indeed the using parameter is not provided. Scalacheck defines the necessary given instances.
+for List[_] and Int and these are matched automatically to arb∗ arguments at the call site.
+Use the law to test that OptionFunctor of Exercise 13 is a functor.
+*/
 
   property("Ex14.02: optionFunctor satisfies map law") =
     optionFunctor.functorLaws.map[Int]
@@ -368,6 +424,8 @@ end Monad
 
 
 // Exercise 15
+//Write monad instances for Option and List. Remap standard library functions
+//to the monad interface (or write them from scratch).
 
 lazy val optionMonad: Monad[Option] = new Monad[Option] {
   def unit[A](a: => A): Option[A] = Option(a)
@@ -384,11 +442,13 @@ lazy val listMonad: Monad[List] = new Monad[List] {
 
 
 // Exercise 16 (tests for Exercise 15, written by the student)
-
+/*
+The object monadLaws in Exercises.scala shows the monad laws implemented
+generically. The design is very similar to the one for functors. Compare this with the description of
+laws in the book. Use these laws to add property tests for optionMonad and listMonad.*/
 object FunctorEx16Spec 
   extends org.scalacheck.Properties("exer16"):
 
-  // Explicitly define an Arbitrary instance for Int to remove ambiguity
   given Arbitrary[Int] = Arbitrary(org.scalacheck.Gen.chooseNum(Int.MinValue, Int.MaxValue))
 
   // Testing monad laws for both optionMonad and listMonad
@@ -402,14 +462,41 @@ end FunctorEx16Spec
 //
 // We do this as an extension to maintain the linear sequence of exercises in
 // the file (we would normally place it in the Monad trait).
+/*
+Implement sequence as an extension method for lists of monadic values. Express
+it in terms of unit and map2. Sequence takes a list of monads and merges them into one, which
+generates a list. Think about a monad as if it was a generator of values. The created monad will be a
+generator of lists of values—each entry in the list generated by one of the input monads. The classic
+type is:
+def sequence[A] (lfa: List[F[A]]): F[List[A]]
+but the exercise uses an extension, so that we do not have to jump around the file when adding
+solutions.
+Now this single implementation of sequence does all what all our previous implementations did—this
+is truly mind-boggling! Use sequence to run some examples in the REPL. Sequence a list of instances
+of the list monad, and a list of instances of the option monad. We could also use it to sequence
+Gens, Pars, and Parsers, if we provided Monad instances for them. This exercise provides a key
+intuition about the monad structure: A monad is a computational pattern for sequencing that is found
+in amazingly many contexts.
+
+*/
 
 extension [F[_]](m: Monad[F])
-  def sequence[A](fas: List[F[A]]): F[List[A]] =
-    fas.foldRight(m.unit(List.empty[A]))((fa, acc) => m.flatMap(fa)(a => m.map(acc)(a :: _)))
+  def sequence[A](fas: List[F[A]]): F[List[A]] = {
+    val initAcc = m.unit(List.empty[A])
+    
+    def folder(fa: F[A], acc: F[List[A]]): F[List[A]] = 
+      m.flatMap(fa)(a => m.map(acc)(a :: _)) // Folder function to combine each element
+
+    fas.foldRight(initAcc)(folder)
+  }
 
 
 
 // Exercise 18
+/*
+Implement replicateM, which replicates a monad instance n times into an instance
+of a list monad. This should be a method of the Monad trait.10
+def replicateM[A](n: Int, ma: F[A]): F[List[A]]*/
 
 extension [F[_]](m: Monad[F])
   def replicateM[A](n: Int, ma: F[A]): F[List[A]] =
@@ -417,9 +504,22 @@ extension [F[_]](m: Monad[F])
     else m.flatMap(ma)(a => m.map(replicateM(n - 1, ma))(a :: _))
 
 
-// Write in the answer below ...
+// Think how replicateM behaves for various choices of F. For example, how does it behave in the
+// List monad? What about Option? Describe in your own words the general meaning of replicateM.
 //
-// ???
+/*
+replicateM(2, List(1, 2)) // Results in List(List(1, 1), List(1, 2), List(2, 1), List(2, 2))
+replicateM(3, Some(5)) // Results in Some(List(5, 5, 5))
+replicateM(3, None)    // Results in None
+
+In general, replicateM takes a monadic value ma of type F[A] and repeats it n times, collecting the results in a List within the monadic context F. The final result is F[List[A]], which represents a monadic "list" of repeated values from ma.
+
+The behavior of replicateM depends on the nature of the monad F:
+
+For monads representing collections or multiple values (like List), replicateM explores all possible combinations of values.
+For monads representing optionality or potential failure (like Option), replicateM short-circuits and returns a failure (None) if any intermediate computation fails.
+
+*/
 
 
 // Exercise 19
