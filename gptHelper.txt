@@ -51,3 +51,6 @@ Except if it is a string in a property, then maintain the string as is:
 property("Ex14.02: optionFunctor satisfies map law (tests Exercise 13)") =
 property("Ex14.02: optionFunctor satisfies map law (tests Exercise 13)") =
 Also maintain the names of the methods.
+
+
+Try to maintain existing comment structure. Some exercises also require text answers, do that as a comment close to the exercise.

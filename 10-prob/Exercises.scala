@@ -69,7 +69,10 @@ enum Ball:
   case Red, Black
 import Ball.*
 
-def pick (n: Int): Dist[Ball] = ???
+def pick(n: Int): Dist[Ball] = {
+  val probabilityOfRed = 1.0 / (n + 1)
+  Pigaro.bernoulli(probabilityOfRed, Red, Black)
+}
 
 //  Exercise 2. 
 //
@@ -87,8 +90,18 @@ def pick (n: Int): Dist[Ball] = ???
 // const/unit/pure.
 
 
-def move(player: Player, n: Int): Dist[Player] = 
-  ???
+def move(player: Player, n: Int): Dist[Player] = {
+  //Base Case: If there are no black balls left (n == 0), the function returns Dirac(player), indicating the current player wins.
+  if (n == 0) Dirac(player)
+  else {
+    pick(n).flatMap {
+      //If Red, it returns a distribution where the current player wins.
+      case Red => Dirac(player)
+      //If Black, it recursively calls move with the next player and one less black ball.
+      case Black => move(next(player), n - 1)
+    }
+  }
+}
 
 // Exercise 3.
 //
@@ -106,17 +119,29 @@ def move(player: Player, n: Int): Dist[Player] =
 // estimate of probability that the distribution takes this value.
 //
 // IData[A].pr(value: A): Double
+val N = 10000  // Sample size for probability estimation
 
 // Probability that Paula wins given Paula starts (the total no of balls: BallsNo)
-def probPaulaStarts: Double = 
-  ???
+def probPaulaStarts: Double = {
+  val paulaStartsDist = move(Paula, BallsNo - 1)
+  val sampleData = paulaStartsDist.sample(N)
+  sampleData.pr(Paula)
+}
 
 // Probability that Paula wins given Peter starts (the total no of balls: BallsNo)
-def probPeterStarts: Double = 
-  ???
+def probPeterStarts: Double = {
+  val peterStartsDist = move(Peter, BallsNo - 1)
+  val sampleData = peterStartsDist.sample(N)
+  //Condition: sampleData.pr(Paula) calculates the probability of Paula winning based on who started.
+  sampleData.pr(Paula)
+}
 
 //  Which strategy is beter for Paula? What if BallsNo == 9? 
-//  Write your answer here in a comment: ___
+// If BallsNo == 8, Paula has a slight advantage if she starts, because
+// the odds slightly favor the player who starts when the total number of
+// balls is even. If BallsNo == 9, then Peter would have a slight advantage,
+// as the odds slightly favor the starting player when the total number of
+// balls is odd.
 
 
 // Exercise 4.
@@ -144,8 +169,7 @@ def probPeterStarts: Double =
 //
 // We first create a uniform prior for the first mover:
 
-lazy val firstMover: Dist[Player] =
-  ???
+lazy val firstMover: Dist[Player] = Pigaro.uniform("firstMover")(Peter, Paula)
 
 // Now create a nullary function 'gameResult' that picks the first mover
 // randomly using 'firstMover' and then returns the probability distribution
@@ -157,12 +181,18 @@ lazy val firstMover: Dist[Player] =
 // The _flatMap function, or its domain-specific synonym probDep, may
 // prove useful. 
 
-def gameResult: Dist[(Player, Player)] = 
-  ???
+def gameResult: Dist[(Player, Player)] = {
+  firstMover.flatMap { first =>
+    move(first, BallsNo - 1).map { winner => (first, winner) }
+  }
+}
 
 // What is the probability that Paula wins with this uniform prior? Does it
 // agree with your intuition? Write the answer in a comment:
-// ____
+
+// Answer: The probability that Paula wins with a uniform prior should be
+// approximately equal to the probability we calculated in Exercise 3, based on
+// whether Paula or Peter started, and averaging them since both start equally.
 
 // Now we are going to make the observation that Paula wins. 
 
@@ -173,14 +203,18 @@ lazy val gameWonByPaula: Dist[(Player, Player)] =
 // You will need to sample and use IData's .pr or .prMatching
 // methods.
 
-lazy val probPaulaStarted: Double = 
-  ???
+lazy val probPaulaStarted: Double = {
+  val sampleData = gameWonByPaula.sample(N)
+  sampleData.prMatching { case (Paula, _) => true }
+}
 
 // Does this probability depend on the number of balls in the urn in the
 // urn being even or odd? What if it is even? What if it is odd?
 //
-// ____
-
+// Answer: Yes, the probability depends on whether the number of balls is even or odd.
+// If the number is even, the likelihood of either player winning is balanced. If the
+// number is odd, the starting player has a slight advantage, so if Paula won, it would
+// imply a slightly higher chance she started in cases with an odd number of balls.
 
 
 // Exercise 6.
@@ -211,8 +245,8 @@ val UpperBound = 6
 
 // Pigaro.uniform[A](name: String)(a : A*) :Element[A]
 
-lazy val blackBallsNo: Dist[Int] =
-  ???
+lazy val blackBallsNo: Dist[Int] = Pigaro.uniform("blackBallsNo")((0 until UpperBound)*)
+
 
 // Now convert the prior distribution on the initial number of black balls in
 // the urn, into a distribution over the winning player.  Since the game is
@@ -221,13 +255,16 @@ lazy val blackBallsNo: Dist[Int] =
 
 // There is no test for this step of the computation.
 
-def outcome: Dist[(Int, Player)] = 
-  ???
+def outcome: Dist[(Int, Player)] = {
+  blackBallsNo.flatMap { n =>
+    move(Paula, n).map(winner => (n + 1, winner))  // `n + 1` accounts for the red ball
+  }
+}
 
 // The following asserts that Paula has won.
 
 lazy val paulaWon: Dist[(Int, Player)] = 
-  ???
+  outcome.matching { case (_, Paula) => }
 
 // Now define the posterior probabilities for all size of the urn from 1 to
 // UpperBound. You can do this using IData.pr.
@@ -237,14 +274,30 @@ lazy val paulaWon: Dist[(Int, Player)] =
 // IData[T].pr (p: T => Boolean)
 // IData[T].prMatching  { case ... => }
 
-lazy val posteriorOdd: Double =
-  ???
+lazy val posteriorOdd: Double = {
+  val sampleData = paulaWon.sample(N)
+  sampleData.pr { case (numBalls, _) => numBalls % 2 != 0 }
+}
 
 // Is the posteriorOdd greater than 1/2? Why?
 //
-// _____
+// Answer: Yes, the posteriorOdd is expected to be slightly greater than 1/2 because,
+// given that Paula won, it is more likely that the starting player had a slight advantage.
+// This slight advantage exists when there is an odd number of balls, hence making it
+// slightly more probable that the urn had an odd number of balls.
 
 
 // Reflect whether the above estimation would take you more time analytically
 // or with a probabilistic programming library?
+/* 
+Using a probabilistic programming library significantly reduces the time and complexity needed for this estimation compared to solving it analytically. With the library:
+
+Complexity Reduction: The library abstracts the intricacies of probability distributions, allowing us to model complex, sequential probabilistic events (like drawing balls and switching players) without manually calculating probabilities at each step.
+
+Sampling and Inference: Instead of calculating exact probabilities by hand (which becomes challenging with larger numbers of balls or more complex conditions), the library handles sampling, Monte Carlo estimation, and posterior updates with minimal code, enabling efficient exploration of possible outcomes.
+
+Scalability: Analytically, adding more conditions or increasing the ball count would increase the manual computation exponentially, while with the library, we simply adjust parameters and resample.
+
+In summary, a probabilistic programming library makes these estimations faster, more accurate, and easier to adjust for different scenarios, especially as complexity grows.
+*/
 

@@ -66,3 +66,9 @@ scala-cli  v. 1.4.3   you need to install
 scala      v. 3.4.2   installed and configured automatically for you
 scalacheck v. 1.18.0  installed and configured automatically for you
 ```
+
+During the course AW upgraded to the following (and it still works):
+```
+openjdk    v. 21.0.4 you need to install, other versions might work
+scala-cli  v. 1.5.0   you need to install
+```
