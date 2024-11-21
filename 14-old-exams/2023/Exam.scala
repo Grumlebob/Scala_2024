@@ -73,7 +73,7 @@ object Streaming:
 
 
   def fViaFold (l: LazyList[Int]): Int = 
-    ???
+    l.foldLeft(0)((acc, a) => acc + (if a % 2 == 1 then 1 else 0))
 
 end Streaming
 
@@ -116,7 +116,11 @@ object Parsing:
       .map { (h,t) => h::t }
 
   lazy val longestLine: Parser[Int] = 
-    ???
+    parser
+    .map( lli => lli.map(li => li.length))
+    .map(li => li.max)
+    // .map(li => li.foldLeft(0)((acc, a) 
+    //   => if a>acc then a else acc))}
 
 
   /* QUESTION 3 ######################################################
@@ -128,7 +132,16 @@ object Parsing:
    */
 
   val allLinesTheSame: Parser[Boolean] = 
-    ???
+    parser
+    .map(lli => lli.map(li => li.length))
+    .map(li => li.foldLeft((-1, true))((acc, a) => //-1 is a starting value
+      if acc._1 > 0 then
+        (a, acc._2 && (acc._1 == a)) 
+      else 
+        (a, true)
+      ))
+    .map(t => t._2)
+    
 
 end Parsing
 
@@ -181,11 +194,10 @@ object Game:
   type Strategy = Dist[Move]
 
   lazy val Alice: Strategy =
-    ???
+    Pigaro.uniform("alice winner")(Rock, Paper, Scissors)
 
   lazy val Bob: Strategy =
-    ???
-
+    Pigaro.uniform("bob winner")(Rock, Paper)
 
 
   /* QUESTION 5 ######################################################
@@ -198,7 +210,7 @@ object Game:
    * Answering QUESTION 4 is not required to answer this one.
    */
   def game (player1: Strategy, player2: Strategy): Dist[Result] =
-    ???
+    player1.map2(player2)(winner)
 
 
 
@@ -215,7 +227,9 @@ object Game:
     = spire.random.rng.SecureJava.apply
 
   lazy val aliceFraction: Double = 
-    ???
+    game(Alice, Bob).sample(10000)
+    .prMatching{ 
+      case Alice => }
 
 end Game
 
