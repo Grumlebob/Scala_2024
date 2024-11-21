@@ -137,7 +137,29 @@ object ExceptionEvaluator:
 
   import M.*
 
-  def eval(term: Term): M[Int] = ???
+  def eval(term: Term): M[Int] = term match {
+  case Term.Const(value) =>
+    Return(value)
+  case Term.Add(lhs, rhs) =>
+    eval(lhs) match {
+      case Raise(e) => Raise(e)
+      case Return(v1) =>
+        eval(rhs) match {
+          case Raise(e) => Raise(e)
+          case Return(v2) => Return(v1 + v2)
+        }
+    }
+  case Term.Div(lhs, rhs) =>
+    eval(lhs) match {
+      case Raise(e) => Raise(e)
+      case Return(v1) =>
+        eval(rhs) match {
+          case Raise(e) => Raise(e)
+          case Return(0) => Raise("Division by zero")
+          case Return(v2) => Return(v1 / v2)
+        }
+    }
+  }
 
   // Exercise 2
   //
