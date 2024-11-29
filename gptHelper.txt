@@ -12,7 +12,8 @@ val initAcc = ...
 def folder = ...
 list.foldRight(initAcc)(folder)
 
-I prefer clearly named variables and parameters, such as countOfStudents instead of 'n'
+I prefer clearly named variables and parameters, such as countOfStudents instead of 'n'.
+But don't change the name of the method.
 
 I have different rankings of how much the teacher likes different coding styles:
 BEST:
