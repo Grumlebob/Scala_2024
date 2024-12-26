@@ -1,63 +1,96 @@
+# **Coding Guidelines**
 
-I prefer readability.
-I like each calculation to have their own val/ def / line of code, if possible.
-Meaning to use intermediate variables:
-So returned tuples should for example be:
-NextElement =...
-NextState =...
-(NextElement, NextState)
+---
 
-If you use a foldRight/Left, i like to have it split into intermediate steps like:
-val initAcc = ...
-def folder = ...
-list.foldRight(initAcc)(folder)
+## **1. Readability is a Priority**
+- Prefer **clean, readable code** with intermediate steps.  
+- Avoid overly compressed code or complex one-liners.
 
-I prefer clearly named variables and parameters, such as countOfStudents instead of 'n'.
-But don't change the name of the method.
+---
 
-I have different rankings of how much the teacher likes different coding styles:
-BEST:
-variables using val
-value bindings
-expression values
-parametric polymorphism
-Composed dedicated higher order functions
-Using dedicated API if possible such as State
-Options or Either monad
+## **2. Intermediate Variables**
+- Use meaningful intermediate variables for clarity.  
+- Example:
+   ```scala
+   val nextElement = ...
+   val nextState = ...
+   (nextElement, nextState)
+   ```
 
-MIDDLE:
-simple recursion.
-folds
-if condition / pattern matching 
+- **FoldRight/FoldLeft** should follow this structure:
+   ```scala
+   val initAcc = ...
+   def folder = ...
+   list.foldRight(initAcc)(folder)
+   ```
 
-WORST:
-variables using var
-Return statement
-any/object type
-loops
-exceptions
+---
 
-I will provide you with a custom implementation of some libraries, i want you to use those if provided.
-Remember that all implementation should happen in the exam.scala file, so please don't invent new methods for the custom library implementations.
+## **3. Naming Conventions**
+- Use **clearly named variables and parameters**:  
+   - ✅ `countOfStudents`  
+   - ❌ `n`  
+- **Do not change method names**
 
-If a full signature is provided such as:
-lazy val intAddition: Monoid[Int] = ???
-Don't then change it to:
-val intAddition: Monoid[Int] = 
-In other words, don't try to change the skeleton requirements, if they are set.
-But you are allowed to change parameternames to something meaningful:
-def someName(f: A => B): Int =
-def someName(transform: A => B): Int =
-Except if it is a string in a property, then maintain the string as is:
-property("Ex14.02: optionFunctor satisfies map law (tests Exercise 13)") =
-property("Ex14.02: optionFunctor satisfies map law (tests Exercise 13)") =
-Also maintain the names of the methods.
+- **Parameter Renaming**: You can rename parameters for clarity:  
+   ```scala
+   def someName(f: A => B): Int =
+   def someName(transform: A => B): Int =
+   ```
+- **Do not alter strings in properties**:  
+   ```scala
+   property("Ex14.02: optionFunctor satisfies map law (tests Exercise 13)") =
+   property("Ex14.02: optionFunctor satisfies map law (tests Exercise 13)") =
+   ```
+
+---
+
+## **4. Coding Style Preferences**
+
+### **BEST:**
+- Variables using `val`  
+- Value bindings  
+- Expression values  
+- Parametric polymorphism  
+- Composed higher-order functions  
+- Dedicated APIs (e.g., `State`)  
+- Using `Option` or `Either` monads  
+
+### **MIDDLE:**
+- Simple recursion  
+- Folds  
+- `if` conditions / pattern matching  
+
+### **WORST:**
+- Variables using `var`  
+- Return statements  
+- `Any`/`Object` types  
+- Loops  
+- Exceptions  
+
+---
+
+## **5. Library Usage**
+- If custom library implementations are provided, **use them as-is**.  
+- **Do not add new methods** to these custom libraries.  
+- All implementations must remain in `exam.scala`.  
 
 
-Don't remove existing comments.
-Some exercises also require text answers, do that as a comment close to the exercise.
+---
 
-When you solve some exercise, please test the relevant method like this:
+## **6. Comments and Documentation**
+- **Do not remove existing comments.**  
+- Text answers for exercises must be included as **comments near the relevant exercise**.
+
+---
+
+## **7. Testing Guidelines**
+
+### **7.1 General Testing Structure**
+
+When adding/solving some method of exercise, then add a test to ensure it works. Like such:
+
+```scala
 package adpro
 
 import org.scalacheck.{Gen, Arbitrary}
@@ -65,7 +98,6 @@ import org.scalacheck.Arbitrary.arbitrary
 import org.scalacheck.Prop.{forAll, forAllNoShrink}
 import org.scalacheck.Prop
 import org.scalactic.TripleEquals.*
-
 
 object ExamSpec
   extends org.scalacheck.Properties("exam-2024-autumn"):
@@ -82,7 +114,7 @@ object StreamingSpec extends org.scalacheck.Properties("lazylist__"):
   property("01 fib(1) returns 1") = fib(1) === 1
 
   /** Random input tests **/
-  property("02 fib(n) satisfies recurrence relation") = 
+  property("02 fib(n) satisfies recurrence relation") =
     forAll(Gen.choose(2, 50)) { n =>
       fib(n) === fib(n - 1) + fib(n - 2)
     }
@@ -102,3 +134,31 @@ object StreamingSpec extends org.scalacheck.Properties("lazylist__"):
     }
 
 end StreamingSpec
+```
+
+---
+
+## **8. Skeleton Requirements**
+- If the exam provides a **predefined method signature**, follow it exactly:
+   ```scala
+   lazy val intAddition: Monoid[Int] = ???
+   ```
+- Do **not** change it to:
+   ```scala
+   val intAddition: Monoid[Int] = ...
+   ```
+
+- However, parameter names can be updated for clarity:
+   ```scala
+   def someName(f: A => B): Int =
+   def someName(transform: A => B): Int =
+   ```
+
+- Maintain **string literals in properties** exactly as provided:
+   ```scala
+   property("Ex14.02: optionFunctor satisfies map law (tests Exercise 13)") =
+   property("Ex14.02: optionFunctor satisfies map law (tests Exercise 13)") =
+   ```
+
+---
+
