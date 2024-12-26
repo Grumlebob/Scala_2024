@@ -66,4 +66,11 @@ import adpro.state.*
 
 val NOTHING = 42
 
+def fib(n: Int): Int =
+  @annotation.tailrec
+  def loop(acc: Int, current: Int, loopCounter: Int): Int =
+    if loopCounter <= 1 then acc
+    else loop(current, acc + current, loopCounter - 1)
+  loop(0, 1, n)
+
 // vim:tw=76:cc=70
