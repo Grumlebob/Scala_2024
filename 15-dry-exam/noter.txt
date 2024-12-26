@@ -1,0 +1,35 @@
+Husk at scala-cli run ikke virker. Istedet brug:
+
+scala-cli compile .
+scala-cli test . -w
+
+
+
+i toppen af filen:
+//> using dep "org.scalacheck::scalacheck:1.18.1"
+//> using dep "org.scalactic::scalactic:3.2.19"
+//> using dep "org.typelevel::spire:0.18.0"
+//> using file "Foldable.scala"
+//> using file "Gen.scala"
+//> using file "IData.scala"
+//> using file "LazyList.scala"
+//> using file "Monad.scala"
+//> using file "Monoid.scala"
+//> using file "Name.scala" 
+//> using file "Par.scala" 
+//> using file "Parsing.scala" 
+//> using file "State.scala" 
+
+Imports:
+
+import org.scalacheck.{Arbitrary, Gen, Prop}
+import Arbitrary.*, Prop.*
+import org.scalactic.TripleEquals.*
+
+import adpro.laziness.LazyList.*
+import adpro.state.State.*
+import adpro.monoids.*
+import adpro.monads.*
+import adpro.parsing.*
+import adpro.parallelism.*
+import pigaro.*

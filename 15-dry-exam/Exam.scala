@@ -1,3 +1,17 @@
+//> using dep "org.scalacheck::scalacheck:1.18.1"
+//> using dep "org.scalactic::scalactic:3.2.19"
+//> using dep "org.typelevel::spire:0.18.0"
+//> using file "Foldable.scala"
+//> using file "Gen.scala"
+//> using file "IData.scala"
+//> using file "LazyList.scala"
+//> using file "Monad.scala"
+//> using file "Monoid.scala"
+//> using file "Name.scala" 
+//> using file "Par.scala" 
+//> using file "Parsing.scala" 
+//> using file "State.scala" 
+
 /* Final Exam: Advanced Programming, by Andrzej Wąsowski IT University
  * of Copenhagen, Autumn 2024: 06 January 2025
  *
@@ -61,16 +75,25 @@ import org.scalacheck.{Arbitrary, Gen, Prop}
 import Arbitrary.*, Prop.*
 import org.scalactic.TripleEquals.*
 
-import adpro.laziness.LazyList
-import adpro.state.*
+import adpro.laziness.LazyList.*
+import adpro.state.State.*
+import adpro.monoids.*
+import adpro.monads.*
+import adpro.parsing.*
+import adpro.parallelism.*
+import pigaro.*
+
 
 val NOTHING = 42
 
-def fib(n: Int): Int =
+
+def fib(n: Int): Int = {
   @annotation.tailrec
   def loop(acc: Int, current: Int, loopCounter: Int): Int =
-    if loopCounter <= 1 then acc
+    if loopCounter == 0 then acc
     else loop(current, acc + current, loopCounter - 1)
+    
   loop(0, 1, n)
+}
 
-// vim:tw=76:cc=70
+
