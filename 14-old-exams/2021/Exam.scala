@@ -45,9 +45,10 @@
 
 package adpro
 
-import org.scalacheck.{Arbitrary, Gen}
+import org.scalacheck.{Arbitrary, Gen, Prop}
 import org.scalacheck.Arbitrary.*
 import org.scalactic.Equality
+import Arbitrary.*, Prop.*
 
 import fpinscala.answers.laziness.LazyList
 import fpinscala.answers.state.*
@@ -87,7 +88,28 @@ object Q1:
    * the corresponding effect as calling the method hello in Java
    * implementation.  Uncomment the definition and fill in the gaps.
    */
-  // def hello (???: ???): ??? = ???
+  /**
+   * hello Function Explanation:
+   * This function takes an instance of the `Printable` enum and returns a string
+   * representation based on the specific case using pattern matching.
+   *
+   * Example Input:
+   * val shape1 = Printable.Triangle
+   * val shape2 = Printable.Square
+   *
+   * Step 1: Match on `shape1` (Printable.Triangle)
+   * - Case Printable.Triangle matches, returns "triangle"
+   *
+   * Step 2: Match on `shape2` (Printable.Square)
+   * - Case Printable.Square matches, returns "square"
+   *
+   * Final Output:
+   * hello(Printable.Triangle) -> "triangle"
+   * hello(Printable.Square) -> "square"
+   */
+  def hello(p: Printable): String = p match
+    case Printable.Triangle => "triangle"
+    case Printable.Square => "square"
 
 end Q1
 
@@ -108,7 +130,37 @@ object Q2:
    * on the input list.
    */
 
-  def sequence[Err,A] (as: List[Either[Err,A]]): Either[Err, List[A]] = ???
+  /**
+   * sequence Function Explanation:
+   * This function converts a list of Either values into a single Either.
+   * If any element is Left, the function returns the last encountered Left value.
+   * Otherwise, it returns a Right containing a list of extracted Right values.
+   *
+   * Example Input:
+   * List(Right(1), Right(2), Left("error"), Right(3))
+   *
+   * Step 1: Start with initAcc = Right(Nil)
+   * Step 2: Define folder function:
+   * - Case Right(a): prepend to accumulator.
+   * - Case Left(err): return Left(err)
+   *
+   * Step 3: Apply foldRight.
+   *
+   * Final Output:
+   * Left("error")
+   */
+  def sequence[Err, A](as: List[Either[Err, A]]): Either[Err, List[A]] =
+    
+    val initAcc: Either[Err, List[A]] = Right(Nil)
+    
+    def folder(ea: Either[Err, A], eas: Either[Err, List[A]]): Either[Err, List[A]] =
+      for
+        as <- eas
+        a  <- ea
+      yield a :: as
+    
+    as.foldRight(initAcc)(folder)
+
 
 end Q2
 
@@ -129,7 +181,32 @@ object Q3:
    * Do not implement the function, just put '???' in the body.
    */
 
-   // def sequence ...
+  /**
+   * sequence Function Explanation:
+   * This function generalizes `sequence` to any Foldable structure.
+   *
+   * * Type Parameters:
+   * - `F[_]`: A higher-kinded type representing a foldable structure.
+   * - `Err`: The type of error used in the `Either`.
+   * - `A`: The type of successful value in the `Either`.
+   *
+   * Context Bound:
+   * - `Foldable[F]`: Ensures that `F` supports fold operations.
+   * 
+   * Example Input:
+   * Foldable(List(Right(1), Right(2), Left("error")))
+   *
+   * Step 1: Start with initAcc = Right(empty structure of F)
+   * Step 2: Define folder function:
+   * - Case Right(a): Add to structure.
+   * - Case Left(err): Return Left(err)
+   *
+   * Step 3: Apply foldRight.
+   *
+   * Final Output:
+   * Left("error")
+   */
+  def sequence[F[_]: Foldable, Err, A](fa: F[Either[Err, A]]): Either[Err, F[A]] = ???
 
 end Q3
 
@@ -155,7 +232,15 @@ object Q4:
 
   type Rand[A] = State[RNG, A]
 
-  lazy val riid: Rand[(Int,Int,Double)] = ???
+  val riid: Rand[(Int, Int, Double)] = 
+    for
+      a <- State(RNG.int)
+      b <- State(RNG.int)
+      lowerBound  = Math.min(a, b)
+      higherBound  = Math.max(a, b)
+      x <- State (RNG.double)
+    yield (lowerBound, higherBound, lowerBound + (higherBound-lowerBound).toDouble.abs * x)
+
 
 end Q4
 
@@ -189,7 +274,8 @@ object Q5:
    * suitable type conversion:
    */
 
-  // ...
+  extension [A](r: RNG.Rand[A])
+    def toStateRand: State[RNG, A] = State(r)
 
   // (the question continues below)
   
@@ -203,7 +289,6 @@ object Q5:
 end Q5
 
 
-
 /* Q6. (5%)
  *
  * Explain in English the mechanism you have used to achieve this. How
@@ -212,7 +297,11 @@ end Q5
  * Indicative length: 2-5 lines.
  */
 
-// write here ...
+// `toStateRand` converts a random number generator (`RNG.Rand[A]`) into a stateful computation (`State[RNG, A]`).
+// - `RNG` represents the random number generator state.
+// - `A` is the generated value.
+// - `State` wraps the RNG logic, allowing composition with other state transformations.
+// This bridges the gap between `RNG.Rand` and `State`
 //
 
 
@@ -237,7 +326,8 @@ object Q7:
    * list is at least 10 elements? Explain.
    */
 
-  // Write here ...
+  //If s is an infinite LazyList, the evaluation will never terminate.
+  //Even if s is finite, evaluating all elements to determine its size is wasteful when we only need to check if there are at least 10 elements.
 
 end Q7
 
@@ -258,7 +348,14 @@ object Q8:
    * from the course.
    */
 
-  def checkIfLongerEqThan[A](s: LazyList[A])(n: Int): Boolean = ???
+  /**
+   * checkIfLongerEqThan Explanation:
+   * Checks if a LazyList is at least `n` elements long without fully evaluating it.
+   */
+  def checkIfLongerEqThan[A](s: LazyList[A])(n: Int): Boolean =
+    s.drop(n - 1) match
+      case LazyList.Empty => false
+      case _ => true
 
 end Q8
 
@@ -267,6 +364,7 @@ end Q8
 object Q9:
 
   import Q8.checkIfLongerEqThan
+  import org.scalacheck.Prop.{forAll, forAllNoShrink}
 
   /*** TESTING
    *
@@ -293,8 +391,14 @@ object Q9:
       Arbitrary { Gen.listOf(Gen.choose(1, 100))
         .map { l => LazyList(l*) } }
 
-    property("Q9: Write the test here by replacing 'false' below") =
-      false
+    property("Q9: nonEmpty stream concatenation >= 2") =
+      forAll { (s: LazyList[Int]) =>
+        if s != LazyList.Empty then
+          checkIfLongerEqThan(s.append(s))(2)
+        else
+          true
+      }
+
 
 end Q9
 
@@ -312,7 +416,25 @@ object Q10:
    * Par[Option[A]] value, for any type 'A'.
    */
 
-  def flatten[A](opa: Option[Par[A]]): Par[Option[A]] = ???
+  /**
+   * flatten Function Explanation:
+   * Converts an Option[Par[A]] into a Par[Option[A]].
+   *
+   * Example Input:
+   * val opa: Option[Par[Int]] = Some(Par.unit(42))
+   *
+   * Step 1: Pattern match on the Option.
+   * - Case Some(par): Run the Par computation and wrap it in Some.
+   * - Case None: Return Par.unit(None).
+   *
+   * Final Output:
+   * flatten(Some(Par.unit(42))) -> Par.unit(Some(42))
+   * flatten(None) -> Par.unit(None)
+   */
+  def flatten[A](opa: Option[Par[A]]): Par[Option[A]] = 
+    opa match
+      case Some(par) => Par.map(par)(a => Some(a))
+      case None => Par.unit(None)
 
 end Q10
 
@@ -325,9 +447,14 @@ end Q10
  * Explain in English what the function from Q10 achieves.
  * Provide its user oriented description, not an explanation of the
  * implementation.
+ * 
+ *  * Par[Option[A]] represents a parallel computation that produces an Option[A] as its result.
+ * In contrast, Option[Par[A]] represents an optional parallel computation.
+ * The function from Q10 transforms an optional parallel computation into a parallel computation
+ * that safely handles the optional value, ensuring it executes in a controlled parallel context.
+ * This is useful for combining computations where some tasks might not exist or are conditionally defined.
  */
 
- // Write here ...
 
 
 
@@ -376,21 +503,24 @@ object Q12:
    * the code):
    */
 
-  // def sum (l: List[Int]): Int =
-  //   val initial: (List[Int], Int) = ???
-  //   val body = ???
-  //   val p = ???
-
-  //   val result = loop[???,???](initial)(body)(p)
-  //   result._2
-
 
   /* DISCLAIMER: Normally, we do not want to compute a sum of a list in this way.
    * This is an artificial exercise for simplicity.
    */
 
-end Q12
+  import Q13.loop
 
+  // An example solution
+  type LI = (List[Int], Int)
+
+  def sum (l: List[Int]): Int =
+    val initial: LI = (l, 0)
+    val body: LI => LI = (l, result) => (l.tail, result + l.head)
+    val p: LI => Boolean = (l, result) => l.nonEmpty
+    val result: LI = loop[LI, Id](initial)(body)(p)
+    result._2
+
+end Q12
 
 
 object Q13:
@@ -405,6 +535,12 @@ object Q13:
    * value.
    */
 
-  def loop[A, M[_]: Monad] (initial: M[A]) (body: A => A) (p: A => Boolean): M[A] = ???
+  def loop[A, M[_]: Monad](initial: M[A])(body: A => A) (p: A => Boolean): M[A] =
+    summon[Monad[M]].flatMap(initial){ a =>
+      if p(a) 
+      then loop (summon[Monad[M]].unit(body(a)))(body)(p)
+      else initial
+    }
+
 
 end Q13

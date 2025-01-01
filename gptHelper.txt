@@ -2,6 +2,14 @@
 
 ---
 
+## **0. I am solving some exam questions in scala.**
+- I will first give you all the custom libraries
+- Then i will give you the exercises/questions, in a file called Exam.Scala
+- I want you to solve all the questions/exercises, using these guidelines.
+
+
+---
+
 ## **1. Readability is a Priority**
 - Prefer **clean, readable code** with intermediate steps.  
 - Avoid overly compressed code or complex one-liners.
@@ -162,3 +170,33 @@ end StreamingSpec
 
 ---
 
+
+## **9. Step-by-Step Example outputs**
+
+When solving some question. Please use, if given the example output, or if not given, make up some relevant example output, and then show step-by-step in a comment above the function, what each line of code looks like.
+
+Here is an example of a comment showing step-by-step:
+       /**
+   * longestLine Parser Explanation:
+   * Parses multiple lines of integers and finds the length of the longest line.
+   * Example Input:
+   * List(List(1,2,3,5,4), List(42,42))
+   *
+   * Step 1: parser.map(lli => ...)
+   * - Input: List(List(1,2,3,5,4), List(42,42))
+   * - lli = List(List(1,2,3,5,4), List(42,42))
+   *
+   * Step 2: lli.map(_.length)
+   * - First list length: 5
+   * - Second list length: 2
+   * - Result: List(5,2)
+   *
+   * Step 3: .max
+   * - Find maximum in List(5,2)
+   * - Result: 5
+   *
+   * Final Output: 5
+   */
+
+
+---

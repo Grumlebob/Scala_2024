@@ -30,3 +30,39 @@ scala-cli clean .
 Run tests of only one exercise:
 scala-cli test . -- -f Ex01
 
+
+-----------code------
+
+
+------------FOLDLEFT SYNTAX:----------------
+  def fViaFold (l: LazyList[Int]): Int = 
+    l.foldLeft(0)((acc, a) => acc + (if a % 2 == 1 then 1 else 0))
+
+  def fViaFold(l: LazyList[Int]): Int = 
+    val initAcc = 0 // Define the initial accumulator value
+    def Folder(acc: Int, a: Int): Int = // Define the folder function
+      if a % 2 == 1 then acc + 1 // Increment accumulator if `a` is odd
+      else acc // Keep accumulator unchanged if `a` is even
+    l.foldLeft(initAcc)(Folder) // Apply foldLeft with initial value and folder function
+
+-------------FoldRight Syntax------------------
+
+  def fViaFoldRight(l: LazyList[Int]): Int = 
+    val initAcc = 0 // Define the initial accumulator value
+    def Folder(a: Int, acc: Int): Int = // Define the folder function
+      if a % 2 == 1 then acc + 1 // Increment accumulator if `a` is odd
+      else acc // Keep accumulator unchanged if `a` is even
+    l.foldRight(initAcc)(Folder) // Apply foldRight with initial value and folder function
+
+-----------Right vs left------------------------
+
+  /**
+   * Explanation of foldLeft vs foldRight:
+   * - `foldLeft` processes elements from the head (leftmost element) to the tail.
+   * - `foldRight` processes elements from the tail (rightmost element) to the head.
+   * - For large LazyLists, `foldLeft` is generally more efficient because it is tail-recursive.
+   * - `foldRight` can be more expressive with infinite LazyLists because it avoids strict evaluation.
+   * Recommendation:
+   * - Use `foldLeft` for finite lists where efficiency is critical.
+   * - Use `foldRight` for potentially infinite lists or when delayed evaluation is required.
+   */

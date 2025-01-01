@@ -1,3 +1,7 @@
+//> using lib "org.scalacheck::scalacheck:1.17.0"
+//> using lib "org.scalactic::scalactic:3.2.17"
+//> using lib "org.typelevel::spire:0.18.0"
+
 /* Final Exam: Advanced Programming, by Andrzej Wąsowski
  * IT University of Copenhagen, Autumn 2023: 05 January 2024
  *
@@ -60,20 +64,41 @@ object Streaming:
    * semantics using a fold.
    */
 
-  def fViaRec (l: LazyList[Int]): Int = 
-    def doRec (l: LazyList[Int], z: Int): Int = 
+  /**
+   * Recursive Version Explanation:
+   * This function counts the number of odd integers in a LazyList.
+   * It uses tail recursion to process each element.
+   */
+  
+  def fViaRec(l: LazyList[Int]): Int = 
+    def doRec(l: LazyList[Int], z: Int): Int = 
       l match 
-        case LazyList.Cons(hd, tl) => 
-          if hd() % 2 == 1 
-          then doRec(tl(), z+1) 
-          else doRec(tl(), z)
-        case LazyList.Empty => z
+        case LazyList.Cons(hd, tl) => // Match LazyList head and tail
+          if hd() % 2 == 1 // Check if the head is odd
+          then doRec(tl(), z + 1) // Increment count and recurse
+          else doRec(tl(), z) // Recurse without incrementing
+        case LazyList.Empty => z // Return accumulated count when list is empty
 
-    doRec (l,0)
+    doRec(l, 0) // Start recursion with initial count 0
 
+  /**
+   * Fold Version Explanation:
+   * Achieves the same result using foldLeft.
+   * Each element increments the accumulator if it is odd.
+   */
+  def fViaFold(l: LazyList[Int]): Int = 
+    val initAcc = 0 // Define the initial accumulator value
+    def Folder(acc: Int, a: Int): Int = // Define the folder function
+      if a % 2 == 1 then acc + 1 // Increment accumulator if `a` is odd
+      else acc // Keep accumulator unchanged if `a` is even
+    l.foldLeft(initAcc)(Folder) // Apply foldLeft with initial value and folder function
 
-  def fViaFold (l: LazyList[Int]): Int = 
-    l.foldLeft(0)((acc, a) => acc + (if a % 2 == 1 then 1 else 0))
+  def fViaFoldRight(l: LazyList[Int]): Int = 
+    val initAcc = 0 // Define the initial accumulator value
+    def Folder(a: Int, acc: => Int): Int = // Define the folder function with lazy accumulator
+      if a % 2 == 1 then acc + 1 // Increment accumulator if `a` is odd
+      else acc // Keep accumulator unchanged if `a` is even
+    l.foldRight(initAcc)(Folder) // Apply foldRight with initial value and folder function
 
 end Streaming
 
@@ -102,10 +127,9 @@ object Parsing:
    * should produce Right(5) for the above example.
    */
 
-  val WS: Parser[String] = regex("""[ \t]+""".r)
-  val NL: Parser[String] = string("\n")
-  val INT: Parser[Int] = 
-    regex("""(\+|-)?[0-9]+""".r).map { _.toInt }
+  val WS: Parser[String] = regex("""[ \t]+""".r) // Match whitespace
+  val NL: Parser[String] = string("\n") // Match newline character
+  val INT: Parser[Int] = regex("""(\+|-)?[0-9]+""".r).map(_.toInt) // Match integers and map to Int
 
   val commaSeparatedInts: Parser[List[Int]] =
     { WS.? |* INT *| WS.? ** (string(",") |* WS.? |* INT *| WS.?).* }
@@ -115,12 +139,30 @@ object Parsing:
     { commaSeparatedInts ** { ( NL |* commaSeparatedInts ) }.* }
       .map { (h,t) => h::t }
 
-  lazy val longestLine: Parser[Int] = 
-    parser
-    .map( lli => lli.map(li => li.length))
-    .map(li => li.max)
-    // .map(li => li.foldLeft(0)((acc, a) 
-    //   => if a>acc then a else acc))}
+        /**
+   * longestLine Parser Explanation:
+   * Parses multiple lines of integers and finds the length of the longest line.
+   * Example Input:
+   * List(List(1,2,3,5,4), List(42,42))
+   *
+   * Step 1: parser.map(lli => ...)
+   * - Input: List(List(1,2,3,5,4), List(42,42))
+   * - lli = List(List(1,2,3,5,4), List(42,42))
+   *
+   * Step 2: lli.map(_.length)
+   * - First list length: 5
+   * - Second list length: 2
+   * - Result: List(5,2)
+   *
+   * Step 3: .max
+   * - Find maximum in List(5,2)
+   * - Result: 5
+   *
+   * Final Output: 5
+   */
+  lazy val longestLine: Parser[Int] =
+    parser.map(lli => // Map parsed lines to their lengths
+      lli.map(_.length).max) // Find maximum length among lines
 
 
   /* QUESTION 3 ######################################################
@@ -131,17 +173,66 @@ object Parsing:
    * NB. This question does not require that you answered QUESTION 2.
    */
 
+  /**
+   * allLinesTheSame Parser Explanation:
+   * Checks if all lines have the same number of integers.
+   * Example Input:
+   * List(List(1,2,3,5,4), List(42,42))
+   *
+   * Step 1: parser.map(lli => ...)
+   * - Input: List(List(1,2,3,5,4), List(42,42))
+   * - lli = List(List(1,2,3,5,4), List(42,42))
+   *
+   * Step 2: lli.map(_.length)
+   * - First list length: 5
+   * - Second list length: 2
+   * - Result: List(5,2)
+   *
+   * Step 3: lengths.distinct
+   * - Remove duplicate lengths
+   * - Result: List(5,2)
+   *
+   * Step 4: lengths.distinct.length == 1
+   * - Check if there is only one unique length
+   * - Result: false
+   *
+   * Final Output: false
+   */
   val allLinesTheSame: Parser[Boolean] = 
-    parser
-    .map(lli => lli.map(li => li.length))
-    .map(li => li.foldLeft((-1, true))((acc, a) => //-1 is a starting value
-      if acc._1 > 0 then
-        (a, acc._2 && (acc._1 == a)) 
-      else 
-        (a, true)
-      ))
-    .map(t => t._2)
-    
+    parser.map(lli => // Map parsed lines
+      lli.map(_.length)) // Get lengths of each line
+      .map { lengths => lengths.distinct.length == 1 } // Check if all lengths are equal
+
+  /**
+   * _allLinesTheSame Parser Explanation:
+   * Alternate implementation using foldLeft.
+   * Example Input:
+   * List(List(1,2,3,5,4), List(42,42))
+   *
+   * Step 1: parser.map(lli => ...)
+   * - Input: List(List(1,2,3,5,4), List(42,42))
+   * - lli = List(List(1,2,3,5,4), List(42,42))
+   *
+   * Step 2: lli.map(_.length)
+   * - Result: List(5,2)
+   *
+   * Step 3: .foldLeft((-1, true))((acc, a) => ...)
+   * - Initial accumulator: (-1, true)
+   * - First iteration: (5, true)
+   * - Second iteration: (2, false)
+   *
+   * Step 4: .map(t => t._2)
+   * - Extract second value from accumulator
+   * - Result: false
+   *
+   * Final Output: false
+   */
+  val _allLinesTheSame: Parser[Boolean] = 
+    parser.map(lli => lli.map(_.length))
+      .map(li => li.foldLeft((-1, true))((acc, a) =>
+        if acc._1 > 0 then (a, acc._2 && (acc._1 == a)) 
+        else (a, true)))
+      .map(t => t._2)
 
 end Parsing
 
@@ -209,9 +300,33 @@ object Game:
    *
    * Answering QUESTION 4 is not required to answer this one.
    */
-  def game (player1: Strategy, player2: Strategy): Dist[Result] =
-    player1.map2(player2)(winner)
 
+
+  /**
+   * Game function explanation:
+   * Computes the probability distribution of game outcomes given two strategies.
+   * Example:
+   * - player1 chooses moves with probabilities (Rock: 0.33, Paper: 0.33, Scissors: 0.33)
+   * - player2 chooses moves with probabilities (Rock: 0.5, Paper: 0.5)
+   */
+  def game(player1: Strategy, player2: Strategy): Dist[Result] =
+    player1.map2(player2)(winner) // Combine strategies using `winner` function
+
+  /**
+   * Alternate implementation using map:
+   * Step 1: Pair the strategies using tuple (player1 -> player2)
+   * Step 2: Apply `.map` to extract move pairs
+   * Step 3: Use `winner` to determine the outcome
+   * Step 4: Return a probability distribution of results
+   * Example Step-by-Step:
+   * - Input: (Rock, Paper)
+   * - Winner: Player 2
+   */
+  def _game(player1: Strategy, player2: Strategy): Dist[Result] =
+    (player1 -> player2) // Step 1: Pair player strategies
+      .map { case (p1, p2) => // Step 2: Extract move pair
+        winner(p1, p2) // Step 3: Apply winner logic
+      } // Step 4: Map results into a distribution
 
 
   /* QUESTION 6 ######################################################
@@ -230,7 +345,35 @@ object Game:
     game(Alice, Bob).sample(10000)
     .prMatching{ 
       case Alice => }
+  
+  /**
+   * Explanation of aliceFraction:
+   * Computes the probability that Alice wins in 10,000 simulated games.
+   *
+   * Step 1: game(Alice, Bob) generates a probability distribution over results.
+   * Step 2: sample(10000) runs 10,000 simulations based on the distribution.
+   * Step 3: prMatching extracts the probability of Alice winning.
+   */
+  lazy val _aliceFraction: Double =
+    game(Alice, Bob) // Step 1: Generate game result distribution
+      .sample(10000) // Step 2: Sample 10,000 outcomes
+      .prMatching { // Step 3: Calculate probability of Alice winning
+        case Some(Player.P1) => true
+      }
 
+  /**
+   * Explanation of _aliceFraction:
+   * Alternate implementation to compute Alice's winning probability.
+   *
+   * Step 1: game(Alice, Bob) generates a probability distribution over results.
+   * Step 2: sample(10000) runs 10,000 simulations.
+   * Step 3: pr calculates the probability of a specific outcome.
+   */
+  lazy val __aliceFraction: Double =
+    game(Alice, Bob) // Step 1: Generate game result distribution
+      .sample(10000) // Step 2: Sample 10,000 outcomes
+      .pr(Some(Player.P1)) // Step 3: Calculate probability of Alice winning
+    
 end Game
 
 
@@ -255,15 +398,22 @@ object RL:
 
   type Q[State, Action] = Map[State, Map[Action, Double]]
 
-  val α = 0.5
-  val γ = 1.0
+  val α = 0.5 // Learning rate
+  val γ = 1.0 // Discount factor
 
-  def update[State, Action](q: Q[State, Action], state: State, action: Action) 
-    (reward: Double, estimate: Double): Q[State, Action] = 
-    val qsa   = q(state)(action)
-    val value = (1.0 - α) * qsa + α * (reward + γ * estimate) /* MARK */
-    val av    = q(state) + (action -> value)
-    q + (state -> av)
+/**
+   * Updates the Q-table for a specific state and action.
+   */
+  def update[State, Action](q: Q[State, Action], state: State, action: Action)
+    (reward: Double, estimate: Double): Q[State, Action] =
+    val qsa = q(state)(action) // Retrieve current Q-value for state-action pair
+    val rewardComponent = reward + γ * estimate // Calculate reward component
+    val adjustedValue = α * rewardComponent // Scale reward component by learning rate
+    val newValue = (1.0 - α) * qsa + adjustedValue // Blend old and new values
+    val updatedActionMap = q(state) + (action -> newValue) // Update action map with new value
+    val updatedQTable = q + (state -> updatedActionMap) // Replace old state map with updated one
+    updatedQTable // Return updated Q-table
+
 
   type IntUpdate = 
     (Q[Int, Int], Int, Int) => (Double, Double) => Q[Int, Int]
@@ -277,15 +427,14 @@ object RL:
    * Continue reading below.
    */
 
-  def qZero(nStates: Int, nActions: Int): Q[Int, Int] = 
-    val actionMap: Map[Int, Double] = List.fill(nActions)(0.0)
-        .zipWithIndex
-        .map(_.swap)
-        .toMap
-    List.fill(nStates)(actionMap)
-      .zipWithIndex
-      .map(_.swap)
-      .toMap
+  /**
+   * Initializes a Q-table with zero values for all states and actions.
+   */
+  def qZero(nStates: Int, nActions: Int): Q[Int, Int] =
+    val zeroValue = 0.0 // Define initial zero value for all actions
+    val actionMap = (0 until nActions).map(a => a -> zeroValue).toMap // Create zeroed action map
+    val stateActionMap = (0 until nStates).map(s => s -> actionMap).toMap // Create zeroed state-action map
+    stateActionMap // Return initialized Q-table
 
   /* We will also test on randomly initialized qTables, which are
    * created using the Scalacheck generator below.
@@ -316,7 +465,7 @@ object RL:
      */
 
     property("00 Null update on null table 2x3") = 
-      ???
+      update(qZero(2, 3), 0, 0)(0.0, 0.0) == qZero(2, 3)
 
 
 
@@ -335,40 +484,15 @@ object RL:
      */
 
     property("01 Null update on null table 2x3") = 
-      ???
+      forAllNoShrink(qGen(2,3)) { q => 
+        val m = q(0).size
+        val n = q.size
+        forAll(Gen.choose(0, n-1), Gen.choose(0, m-1)) { (s, a) =>
+          val qU = update(q,s,a)(q(s)(a), 0.0)
+          qU ?= q
+        }
+      }
 
   end NullUpdatesSpec
-
-  import monocle.*
-  import monocle.syntax.all.*
-  import monocle.function.all.*
-  import monocle.function.Index
-  import monocle.PLens.lensChoice
-
-  /* QUESTION 9 ######################################################
-   * We want to rewrite the update function using lenses.  The lens
-   * `lens` below, implemented using the monocle library, projects a
-   * q-table at its value at position (s,a) (i.e, state and action). 
-   *
-   * Reimplement the function 'update' to use this lens. Note that the
-   * lens is used to obtain and replace the reward value. The actual
-   * update calculation (marked MARK in the update function above)
-   * will not change in this implementation, only the code to access
-   * and replace the value.
-   *
-   * Assume that we only perform an update for a state and action for
-   * which the Q table is defined.
-   *
-   * This question can be answered independently of the previous one.
-   */
-
-  def lens[S, A](s: S, a: A): Optional[Q[S,A], Double] = 
-    val l1 = summon[Index[Q[S, A], S, Map[A, Double]]].index(s)
-    val l2 = summon[Index[Map[A, Double], A, Double]].index(a)
-    l1.andThen(l2)
-  
-  def updateWithLens[State, Action] (q: Q[State, Action], s: State, a: Action)
-    (reward: Double, estimate: Double): Q[State, Action] =
-    ???
 
 end RL
