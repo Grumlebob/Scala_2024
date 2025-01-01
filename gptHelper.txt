@@ -6,6 +6,7 @@
 - I will first give you all the custom libraries
 - Then i will give you the exercises/questions, in a file called Exam.Scala
 - I want you to solve all the questions/exercises, using these guidelines.
+- I will ask for question by question. Remember that for each question i want a property test, step-by-step comment above the function explaining a sample input output. 
 
 
 ---
