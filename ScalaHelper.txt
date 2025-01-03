@@ -31,8 +31,24 @@ Run tests of only one exercise:
 scala-cli test . -- -f Ex01
 
 
+
+
 -----------code------
 
+
+-----For prints!------
+
+Lav en property test med print i sig.
+
+      // Debug Output
+      //println(s"\nTesting primesApart($n):")
+      //pairs.foreach { case (p1, p2) => println(s"($p1, $p2)") }
+
+
+Husk i test at man skal importe selve opgaven:
+import adpro.PrimesAndLaziness.*
+for at bruge metoderne:
+val pairs = PrimesAndLaziness.primesApart(n).take(5).toList
 
 ------------FOLDLEFT SYNTAX:----------------
   def fViaFold (l: LazyList[Int]): Int = 
@@ -66,3 +82,11 @@ scala-cli test . -- -f Ex01
    * - Use `foldLeft` for finite lists where efficiency is critical.
    * - Use `foldRight` for potentially infinite lists or when delayed evaluation is required.
    */
+
+
+-------Functioner der returnere en function------------------
+
+  def SafeTotal[A,B](f: A => B): A => Option[B] = 
+
+Så skal man stortset altid starte function implementation med:
+    a => 

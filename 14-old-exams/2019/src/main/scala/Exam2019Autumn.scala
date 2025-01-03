@@ -129,7 +129,17 @@ object Exam2019Autumn {
 
     type Result = Option[Player]
 
-    def winner (player1: Move, player2: Move): Result = ???
+    def winner (player1: Move, player2: Move): Result = 
+      (player1, player2) match {
+        case (Rock, Scissors) => Some(P1)
+        case (Scissors, Rock) => Some(P2)
+        case (Paper, Rock) => Some(P1)
+        case (Rock, Paper) => Some(P2)
+        case (Scissors, Paper) => Some(P1)
+        case (Paper, Scissors) => Some(P2)
+        case _ => None
+      }
+
 
     /**
      *  Assume that  players use  very simple  strategies to  play the
@@ -152,9 +162,9 @@ object Exam2019Autumn {
      *  Paper -> Scissors -> ...
      */
 
-    def alwaysScissors: Stream[Move] = ???
+    def alwaysScissors: Stream[Move] = Stream.constant (Scissors)
 
-    def alternating: Stream[Move] = ???
+    def alternating: Stream[Move] = cons (Rock, cons (Paper, cons (Scissors, alternating)))
 
     /**
      * Given two strategies, one for each player, we can simulate many
@@ -170,7 +180,10 @@ object Exam2019Autumn {
      * need to run them to solve this question.
      */
 
-    lazy val results: Stream[Result] = ???
+    lazy val results: Stream[Result] =
+     alwaysScissors
+       .zip (alternating)
+       .map { case (p1,p2) => winner (p1,p2) }
 
     /**
      * Q4. Compute  the   fraction  how   many  times  the   Player  1
@@ -182,7 +195,13 @@ object Exam2019Autumn {
      * defined, if you have not solved Q3.
      */
 
-    lazy val scissorsFraction: Double = ???
+    lazy val scissorsFraction: Double =
+      results
+       .take (500)
+       .filter { _ == Some (P1) }
+       .toList
+       .size / 500.0
+
 
     /**
      * Now  we   change  from   simple  deterministic   strategies  to
@@ -207,9 +226,10 @@ object Exam2019Autumn {
 
     type Strategy = Element[Move]
 
-    lazy val Alice: Strategy = ???
+    lazy val Alice: Strategy = Uniform (Rock, Paper, Scissors)
 
-    lazy val Bob: Strategy = ???
+    // lazy val Bob: Strategy = ???
+    lazy val Bob: Strategy = Select (0.5 -> Rock, 0.5 -> Paper, 0.0 -> Scissors)
 
     /**
      * Q6. Implement  a function  that  computes a  result  of a  game
@@ -221,7 +241,10 @@ object Exam2019Autumn {
      * is available, even if you have not solved Q1.
      */
 
-    def game (player1: Strategy, player2: Strategy): Element[Result] = ???
+    def game (player1: Strategy, player2: Strategy): Element[Result] = for {
+      p1 <- player1
+      p2 <- player2
+    } yield winner (p1,p2)
 
     /**
      * Q7. Use importance  sampling to  estimate the  probability that
@@ -234,7 +257,8 @@ object Exam2019Autumn {
      * https://www.cra.com/Figaro_ScalaDoc/com/cra/figaro/algorithm/sampling/Importance.html
      */
 
-    lazy val aliceFraction: Double = ???
+    lazy val aliceFraction: Double =
+      Importance.probability (game (Alice, Bob), Some(P1))
 
   }
 
@@ -271,7 +295,14 @@ object Exam2019Autumn {
      * you refer to them unambiguously, if you wanted to.
      */
 
-    // ...
+    // The actual implementation of flatMap is found in the class Trivial (line
+    // 02). This function just applies f to the value stored in the monad. The
+    // second flatMap, in the companion object Trivial (line 09), delegates
+    // to the first one.  It is only added, so that both a function-style and
+    // a method-style invocation is supported:
+    //
+    //  method style:    Trivial (1).flatMap (f)
+    //  function style:  flatMap (Trivial(1)) (f) -- after a suitable import.
 
     /**
      * We shall now be testing whether  a Trivial is actually a monad.

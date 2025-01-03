@@ -104,7 +104,17 @@ object Q1 { // 10%
    * Option monad.  Include the return type in the function signature:
    */
 
-  def smashOption = ???
+  def smashOption[A] (l: List[A]): Option[List[(A,A)]] = 
+    l match {
+      case Nil =>
+        Some (Nil)
+
+      case h1 :: h2 :: tl =>
+        Some (h1 -> h2 :: smash (tl))
+
+      case _ =>
+        None
+    }
 
 }
 
@@ -141,7 +151,18 @@ object Q2 { // 10%
      * values of List[A] but requires that A is splittable
      */
 
-    def smash = ???
+    def smash[A: Splittable] (l: List[A]): List[(A,A)] = 
+      l match {
+        case Nil =>
+          Nil
+
+        case h1 :: h2 :: tl =>
+          h1 -> h2 :: smash (tl)
+
+        case h1 :: tl =>
+          val (h2,h3) = implicitly[Splittable[A]].split (h1)
+          h2 -> h3 :: smash (tl)
+      }
 
   }
 
@@ -162,9 +183,21 @@ object Q3 { // 10%
    *   in the right list
    */
 
-  // implicit val splitDouble = ...
+  implicit val splitDouble = new Splittable[Double] {
+    def split (a: Double): (Double,Double) = (a/2.0, a/2.0)
+  }
 
-  // implicit val splitListInt = ...
+
+  implicit lazy val splitListInt =
+    new Splittable[List[Int]] {
+
+      def split (l: List[Int]) = {
+        val lidx = l.zipWithIndex
+        val odd = l.filter { case (_,i) => i % 2 == 1 }
+        val even = l.filter { case (_,i) => i % 2 == 0 }
+        (odd.unzip._1, even.unzip._2)
+      }
+    }
 
 }
 
@@ -172,8 +205,14 @@ object Q3 { // 10%
 
 object Q4 { // 15%
 
-  import Q2._
-  import Q3._
+  import Q2._ // Assuming `smash` was implemented in Q2
+  import Q3._ // Assuming Foldable structure or other necessary helpers
+  import org.scalatest.freespec.AnyFreeSpec
+  import org.scalatest.matchers.should.Matchers
+  import org.scalatestplus.scalacheck.ScalaCheckPropertyChecks
+  import org.scalacheck.Gen
+  import org.scalacheck.Arbitrary.arbitrary
+
 
   /**
    * PROPERTY-BASED TESTING
@@ -195,20 +234,34 @@ object Q4 { // 15%
    */
 
   class SmashSpec
-    extends org.scalatest.freespec.AnyFreeSpec
-    with org.scalatest.matchers.should.Matchers
-    with org.scalatestplus.scalacheck.ScalaCheckPropertyChecks {
+      extends AnyFreeSpec
+      with Matchers
+      with ScalaCheckPropertyChecks {
 
-    "Write the first test here" in {
+    // Generator for non-empty lists
+    val evenListGen: Gen[List[Int]] = Gen.choose(0, 100).flatMap(n => Gen.listOfN(n * 2, arbitrary[Int]))
+    val oddListGen: Gen[List[Int]] = Gen.choose(0, 100).flatMap(n => Gen.listOfN(n * 2 + 1, arbitrary[Int]))
 
-      fail ()  // <-- replace with test
+    "The size of a smashed list should be half the size of an even-length list" in {
+      forAll(evenListGen) { (list: List[Int]) =>
+        whenever(list.size % 2 == 0) {
+          val smashed = smash(list)
+          smashed.size shouldEqual list.size / 2
+        }
+      }
     }
 
-    "Write the second test here" in {
-
-      fail ()  // <-- replace with test
+    "The size of a smashed list should be (size / 2 + 1) for an odd-length list" in {
+      forAll(oddListGen) { (list: List[Int]) =>
+        whenever(list.size % 2 == 1) {
+          val smashed = smash(list)
+          smashed.size shouldEqual (list.size / 2 + 1)
+        }
+      }
     }
   }
+
+
 }
 
 
@@ -231,7 +284,12 @@ object Q5 { // 5%
    * of streams.
 	 */
 
-	def successes[A,B] (results: Stream[Either[A,B]]): Stream[B] = ???
+	def successes[A,B] (results: Stream[Either[A,B]]): Stream[B] = 
+    results flatMap { _ match {
+      case Right (b) => Stream (b)
+      case Left (b) => Stream ()
+    } }
+
 
 }
 
@@ -251,6 +309,21 @@ object Q6 { // 10%
    * allowed.
    *
    * ???
+   * 
+   *    * Possible answer for successes1 (from Jonas):
+   *
+   * If  there  are  infinitely  many subsequent  failures,  then  the
+   * computation will  not terminate. It will  get stuck on  trying to
+   * obtain  the head  of  the stream  of  successes, while  iterating
+   * through the failures.
+   *
+   * More  precisely, the  problem will  appear in  flatMap, when  its
+   * result is  forced to deliver  the next element.  This  will cause
+   * flatMap to  continue folding producing empty  streams forver.  Of
+   * course, this  does not  occur until we  actually evaluate  it, as
+   * long as it  remains unevaluated (lazy), we are not  aware of this
+   * problem.
+   */
    */
 
 }
@@ -288,7 +361,13 @@ object Q7 { // 10%
    * out of bounds.
    */
 
-  ???
+  // Add extension methods for accessing elements to VectorD
+  implicit class VectorDExtensions(v: VectorD) {
+    def apply(i: Int): Option[Double] =
+      v match {
+        case Some(l) if i >= 0 && i < l.size => Some(l(i))
+        case _ => None
+      }
 
 }
 
@@ -336,7 +415,14 @@ object Q8 { // 10%
    * traversing the elements in order.
    */
 
-  def flattenBox = ???
+  def flattenBox[A] (b: Box[A]): List[A] = 
+    b match {
+      case End =>
+        Nil
+
+      case Pack (hd, tl) =>
+        hd :: flattenBox (tl).flatten
+    }
 
   /**
    * 2. Which call in your solution is polymorphically recursive?  Add
@@ -346,14 +432,24 @@ object Q8 { // 10%
    *    polymorphically recursive).  Expected size 4-5 lines (more and
    *    less is allowed)
    *
-   *    ???
+ /**
+   *  A possible  answer: the  type annotation has  been added  to the
+   *  polymorphically recursive  call in line  581 above (the  call in
+   *  the Pack  case). The call  is polymorphically  recursive because
+   *  the type argument  changes from A to List[A]  between the caller
+   *  and the callee.
+   */
    */
 
   /**
    * 3. Consider the Box 'b' below. What is the result of running flattenBox on
    *    it? Write the answer and a short explanation in English why.
    *
-   *    ???
+   * List (List (2,5), List (1), List (3,4), List (42,42,42))
+   *
+   * This is the result because 'b' is a boc of type Box[List[Int]] so
+   * the  basic  elements of  its  flat  representation are  lists  of
+   * integers.
    */
 
   val b = Pack (
@@ -389,6 +485,21 @@ object Q9 { // 15%
    * optional \n character).   An empty file parses to an empty list.
    */
 
-  lazy val parser = ???
+  val WS: Parser[String] = """(\t| )+""".r
+
+  val NL: Parser[String] = string("\n")
+
+  val INT: Parser[Int] = """(\+|-)?[0-9]+""".r.map { _.toInt }
+
+  val commaSeparatedInts: Parser[List[Int]] =
+    { WS.? |* INT ** ( "," |* WS.? |* INT).* *| WS.? }
+      .map { case (h,t) => h::t }
+
+  lazy val csvInt: Parser[List[List[Int]]] =
+    { commaSeparatedInts ** { ( NL |* commaSeparatedInts ) }.* *| NL.? }
+      .map { case (h,t) => h::t }
+
+  lazy val parser: Parser[List[List[Int]]] =
+    { csvInt.? } map { _.getOrElse (Nil) }
 
 }

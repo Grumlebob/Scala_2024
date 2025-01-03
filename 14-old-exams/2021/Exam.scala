@@ -88,11 +88,8 @@ object Q1:
    * the corresponding effect as calling the method hello in Java
    * implementation.  Uncomment the definition and fill in the gaps.
    */
+
   /**
-   * hello Function Explanation:
-   * This function takes an instance of the `Printable` enum and returns a string
-   * representation based on the specific case using pattern matching.
-   *
    * Example Input:
    * val shape1 = Printable.Triangle
    * val shape2 = Printable.Square
@@ -107,9 +104,10 @@ object Q1:
    * hello(Printable.Triangle) -> "triangle"
    * hello(Printable.Square) -> "square"
    */
-  def hello(p: Printable): String = p match
-    case Printable.Triangle => "triangle"
-    case Printable.Square => "square"
+  def hello(p: Printable): String = 
+    p match
+      case Printable.Triangle => "triangle"
+      case Printable.Square => "square"
 
 end Q1
 
@@ -149,18 +147,39 @@ object Q2:
    * Final Output:
    * Left("error")
    */
-  def sequence[Err, A](as: List[Either[Err, A]]): Either[Err, List[A]] =
+  def _sequence[Err, A](list: List[Either[Err, A]]): Either[Err, List[A]] =
     
+   //As we have not failed yet.
     val initAcc: Either[Err, List[A]] = Right(Nil)
     
-    def folder(ea: Either[Err, A], eas: Either[Err, List[A]]): Either[Err, List[A]] =
+    def folder(element: Either[Err, A], acc: Either[Err, List[A]]): Either[Err, List[A]] =
       for
-        as <- eas
-        a  <- ea
-      yield a :: as
+        listContent <- acc
+        unpackedElement  <- element
+      yield unpackedElement :: listContent
     
-    as.foldRight(initAcc)(folder)
+    list.foldRight(initAcc)(folder)
 
+  def sequence[Err, A](list: List[Either[Err, A]]): Either[Err, List[A]] =
+    // As we have not failed yet.
+    val initAcc: Either[Err, List[A]] = Right(Nil)
+    
+    def folder(element: Either[Err, A], acc: Either[Err, List[A]]): Either[Err, List[A]] =
+      acc match
+        //We preserve the last error encountered.
+        case Left(lastError) => Left(lastError)
+        //If we have not failed yet. We check next element
+        case Right(accList) =>
+          
+          element match
+            // Overwrite with the latest error
+            case Left(currentError) => Left(currentError)
+            // Forward the list with the new element
+            case Right(value) => 
+              val updatedList = value :: accList
+              Right(updatedList)
+
+    list.foldRight(initAcc)(folder)    
 
 end Q2
 
@@ -206,7 +225,7 @@ object Q3:
    * Final Output:
    * Left("error")
    */
-  def sequence[F[_]: Foldable, Err, A](fa: F[Either[Err, A]]): Either[Err, F[A]] = ???
+  def sequence[F[_]: Foldable, Err, A](foldableList: F[Either[Err, A]]): Either[Err, F[A]] = ???
 
 end Q3
 
@@ -232,7 +251,7 @@ object Q4:
 
   type Rand[A] = State[RNG, A]
 
-  val riid: Rand[(Int, Int, Double)] = 
+  val _riid: Rand[(Int, Int, Double)] = 
     for
       a <- State(RNG.int)
       b <- State(RNG.int)
@@ -242,6 +261,35 @@ object Q4:
     yield (lowerBound, higherBound, lowerBound + (higherBound-lowerBound).toDouble.abs * x)
 
 
+  val __riid: Rand[(Int, Int, Double)] =
+    State(RNG.int).flatMap { a =>
+      State(RNG.int).flatMap { b =>
+        val lowerBound = Math.min(a, b)
+        val higherBound = Math.max(a, b)
+        State(RNG.double).map { x =>
+          val scaledX = lowerBound + (higherBound - lowerBound).toDouble.abs * x
+          (lowerBound, higherBound, scaledX)
+        }
+      }
+    }
+
+  val riid: Rand[(Int, Int, Double)] = {
+    val randomIntA: Rand[Int] = State(RNG.int)
+    val randomIntB: Rand[Int] = State(RNG.int)
+    val randomDouble: Rand[Double] = State(RNG.double)
+
+    randomIntA.flatMap { a =>
+      randomIntB.flatMap { b =>
+        val lowerBound = Math.min(a, b)
+        val higherBound = Math.max(a, b)
+
+        randomDouble.map { x =>
+          val scaledX = lowerBound + (higherBound - lowerBound).toDouble.abs * x
+          (lowerBound, higherBound, scaledX)
+        }
+      }
+    }
+  }  
 end Q4
 
 
@@ -276,15 +324,15 @@ object Q5:
 
   extension [A](r: RNG.Rand[A])
     def toStateRand: State[RNG, A] = State(r)
-
-  // (the question continues below)
   
+
   // 2022 NOTE: 
   //
   // This question cannot be answered with the material we covered in
   // Scala 3. If you are interested, this is how it can be done in Scala 3 
   // https://docs.scala-lang.org/scala3/book/ca-implicit-conversions.html
   // but this material is not in the curriculum anymore
+
 
 end Q5
 
@@ -314,9 +362,11 @@ object Q7:
    * point to seek traps in it.)
    */
   def size[A](s: LazyList[A]): Int =
-    def f(s: LazyList[A], acc: Int): Int = s match
-      case LazyList.Cons(_, t) =>  f (t (), acc+1)
-      case LazyList.Empty => acc
+    
+    def f(s: LazyList[A], acc: Int): Int = 
+      s match
+        case LazyList.Cons(_, t) =>  f (t (), acc+1)
+        case LazyList.Empty => acc
     f(s, 0)
 
 
@@ -357,6 +407,15 @@ object Q8:
       case LazyList.Empty => false
       case _ => true
 
+
+  // Using size function above. But only taking n elements of the list, so it is not infinite
+  def _checkIfLongerEqThan[A](s: LazyList[A])(n: Int): Boolean =
+    size(s.take(n)) == n
+
+  def __checkIfLongerEqThan_[A](s: LazyList[A])(n: Int): Boolean =
+    (n == 0) || s.drop(n-1) != LazyList.Empty
+
+
 end Q8
 
 
@@ -387,9 +446,16 @@ object Q9:
   class MySpec
     extends org.scalacheck.Properties("Q9"):
 
+
+    //Generates a lazyList. The List have elements of 1 to 100
     given Arbitrary[LazyList[Int]] =
       Arbitrary { Gen.listOf(Gen.choose(1, 100))
         .map { l => LazyList(l*) } }
+
+    // Guarantee non-empty LazyLists
+    //given Arbitrary[LazyList[Int]] =
+    //  Arbitrary { Gen.nonEmptyListOf(Gen.choose(1, 100))
+    //    .map { l => LazyList(l*) } }    
 
     property("Q9: nonEmpty stream concatenation >= 2") =
       forAll { (s: LazyList[Int]) =>
@@ -398,6 +464,19 @@ object Q9:
         else
           true
       }
+    
+    property("Q9_V2: nonEmpty stream concatenation >= 2") =
+      forAll { (s: LazyList[Int]) =>
+        s.headOption match
+          case Some(_) => checkIfLongerEqThan(s.append(s))(2)
+          case None    => true
+      }
+
+    //Only works if i use the other generator, that only gives nonempty LazyList instances
+    //property("Q9: nonEmpty stream concatenation >= 2") =
+    //  forAll { (s: LazyList[Int]) =>
+    //    checkIfLongerEqThan(s.append(s))(2)
+    //  }
 
 
 end Q9
@@ -431,9 +510,9 @@ object Q10:
    * flatten(Some(Par.unit(42))) -> Par.unit(Some(42))
    * flatten(None) -> Par.unit(None)
    */
-  def flatten[A](opa: Option[Par[A]]): Par[Option[A]] = 
-    opa match
-      case Some(par) => Par.map(par)(a => Some(a))
+  def flatten[A](optionPar: Option[Par[A]]): Par[Option[A]] = 
+    optionPar match
+      case Some(par) => Par.map(par)(parallelOption => Some(parallelOption))
       case None => Par.unit(None)
 
 end Q10
@@ -458,6 +537,8 @@ end Q10
 
 
 
+
+ 
 object Q12:
 
   /*** MONADS
@@ -473,11 +554,6 @@ object Q12:
     def unit[A] (a: => A): Id[A] = a
     extension [A](a: Id[A])
       override def flatMap[B](f: A => Id[B]): Id[B] = f(a)
-
-  /* Now assume that there is a function loop of the following type.
-   **/
-
-  def loop[A, M[_]: Monad](initial: M[A])(body: A => A)(p: A => Boolean): M[A] = ???
 
   /* This function runs a loop 'in the monad M'.  It starts at the
    * initial value, then it applies the function 'body' as long as the
@@ -499,13 +575,8 @@ object Q12:
    *
    * Convert the above imperative implementation of 'sum' into a pure one by
    * using the 'loop' function and the identity monad.  The implementation has
-   * been started for you.  Complete it by replacing '???' (you may uncomment
-   * the code):
-   */
-
-
-  /* DISCLAIMER: Normally, we do not want to compute a sum of a list in this way.
-   * This is an artificial exercise for simplicity.
+   * been started for you.  Complete it by replacing '???' (you may uncomment the
+   * code):
    */
 
   import Q13.loop
@@ -513,14 +584,25 @@ object Q12:
   // An example solution
   type LI = (List[Int], Int)
 
-  def sum (l: List[Int]): Int =
+  def sum(l: List[Int]): Int =
     val initial: LI = (l, 0)
-    val body: LI => LI = (l, result) => (l.tail, result + l.head)
-    val p: LI => Boolean = (l, result) => l.nonEmpty
+    
+    val body: LI => LI = {
+      case (head :: tail, result) => (tail, result + head)
+      case (Nil, result)          => (Nil, result) // Handles edge case explicitly
+    }
+    
+    val p: LI => Boolean = {
+      case (Nil, _) => false
+      case _        => true
+    }
+    
     val result: LI = loop[LI, Id](initial)(body)(p)
     result._2
 
+
 end Q12
+
 
 
 object Q13:
@@ -535,12 +617,28 @@ object Q13:
    * value.
    */
 
-  def loop[A, M[_]: Monad](initial: M[A])(body: A => A) (p: A => Boolean): M[A] =
+  // Both solutions below are fine
+  def loop_[A, M[_]: Monad](initial: M[A])(body: A => A)(p: A => Boolean): M[A] =
+    for
+      a      <- initial
+      result <- if p(a) 
+                then loop_ (summon[Monad[M]].unit(body(a)))(body)(p) 
+                else initial
+    yield result
+
+  def _loop[A, M[_]: Monad](initial: M[A])(body: A => A) (p: A => Boolean): M[A] =
     summon[Monad[M]].flatMap(initial){ a =>
       if p(a) 
       then loop (summon[Monad[M]].unit(body(a)))(body)(p)
       else initial
     }
 
-
+  def loop[A, M[_]: Monad](initial: M[A])(body: A => A)(p: A => Boolean): M[A] =
+    summon[Monad[M]].flatMap(initial) { a =>
+      if p(a)
+      then loop(summon[Monad[M]].unit(body(a)))(body)(p)
+      else summon[Monad[M]].unit(a) // Ensure termination by returning the last value
+    }
+    
 end Q13
+

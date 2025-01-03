@@ -1,6 +1,5 @@
 //> using lib "org.scalacheck::scalacheck:1.17.0"
 //> using lib "org.scalactic::scalactic:3.2.17"
-//> using lib "org.typelevel::spire:0.18.0"
 
 /* Final Exam: Advanced Programming, by Andrzej Wąsowski
  * IT University of Copenhagen, Autumn 2023: 05 January 2024
@@ -87,10 +86,13 @@ object Streaming:
    * Each element increments the accumulator if it is odd.
    */
   def fViaFold(l: LazyList[Int]): Int = 
+    
     val initAcc = 0 // Define the initial accumulator value
-    def Folder(acc: Int, a: Int): Int = // Define the folder function
-      if a % 2 == 1 then acc + 1 // Increment accumulator if `a` is odd
+    
+    def Folder(acc: Int, currentElement: Int): Int = // Define the folder function
+      if currentElement % 2 == 1 then acc + 1 // Increment accumulator if `a` is odd
       else acc // Keep accumulator unchanged if `a` is even
+    
     l.foldLeft(initAcc)(Folder) // Apply foldLeft with initial value and folder function
 
   def fViaFoldRight(l: LazyList[Int]): Int = 
@@ -99,6 +101,7 @@ object Streaming:
       if a % 2 == 1 then acc + 1 // Increment accumulator if `a` is odd
       else acc // Keep accumulator unchanged if `a` is even
     l.foldRight(initAcc)(Folder) // Apply foldRight with initial value and folder function
+
 
 end Streaming
 
@@ -115,7 +118,7 @@ object Parsing:
    * values produced by a successful parse is List[List[Int]].
    *
    * Example input:
-   * 1,2,3 , 5,4
+   * 1,2,3, 5,4
    * 42,42
    *
    * Example output: 
@@ -162,7 +165,7 @@ object Parsing:
    */
   lazy val longestLine: Parser[Int] =
     parser.map(lli => // Map parsed lines to their lengths
-      lli.map(_.length).max) // Find maximum length among lines
+      lli.map(_.size).max) // Find maximum length among lines
 
 
   /* QUESTION 3 ######################################################
@@ -199,9 +202,9 @@ object Parsing:
    * Final Output: false
    */
   val allLinesTheSame: Parser[Boolean] = 
-    parser.map(lli => // Map parsed lines
-      lli.map(_.length)) // Get lengths of each line
-      .map { lengths => lengths.distinct.length == 1 } // Check if all lengths are equal
+    val lineLengths = parser.map(lli => lli.map(_.size)) // Get lengths of each line
+    val lengthsAsSet = lineLengths.map(_.toSet) // Convert lengths to a set to remove duplicates
+    lengthsAsSet.map(_.size == 1) // Check if there is only one unique length
 
   /**
    * _allLinesTheSame Parser Explanation:
@@ -271,7 +274,7 @@ object Game:
   def winner(player1: Move, player2: Move): Result = (player1, player2) match
     case (Rock, Scissors) | (Paper, Rock) | (Scissors, Paper) => Some(P1)
     case (Scissors, Rock) | (Rock, Paper) | (Paper, Scissors) => Some(P2)
-    case _ => None
+    case _ => None //DRAW
 
   /* A strategy is a distribution over the next move, so Dist[Move].
    * Create two strategies, one for Alice and one for Bob:
@@ -288,7 +291,7 @@ object Game:
     Pigaro.uniform("alice winner")(Rock, Paper, Scissors)
 
   lazy val Bob: Strategy =
-    Pigaro.uniform("bob winner")(Rock, Paper)
+    Pigaro.bernoulli("bob winner")(0.5,Rock,Paper)
 
 
   /* QUESTION 5 ######################################################
@@ -309,7 +312,7 @@ object Game:
    * - player1 chooses moves with probabilities (Rock: 0.33, Paper: 0.33, Scissors: 0.33)
    * - player2 chooses moves with probabilities (Rock: 0.5, Paper: 0.5)
    */
-  def game(player1: Strategy, player2: Strategy): Dist[Result] =
+  def ____game(player1: Strategy, player2: Strategy): Dist[Result] =
     player1.map2(player2)(winner) // Combine strategies using `winner` function
 
   /**
@@ -325,8 +328,15 @@ object Game:
   def _game(player1: Strategy, player2: Strategy): Dist[Result] =
     (player1 -> player2) // Step 1: Pair player strategies
       .map { case (p1, p2) => // Step 2: Extract move pair
-        winner(p1, p2) // Step 3: Apply winner logic
-      } // Step 4: Map results into a distribution
+        winner(p1, p2) // step 3: Map to a Dist
+      }
+
+  //med brug af propDep fra Thor:
+  def game (player1: Strategy, player2: Strategy): Dist[Result] =
+    player1
+      .probDep("Game") (_ => player2)
+      .map(winner(_, _))
+
 
 
   /* QUESTION 6 ######################################################
@@ -341,10 +351,16 @@ object Game:
   given rng: spire.random.rng.SecureJava 
     = spire.random.rng.SecureJava.apply
 
-  lazy val aliceFraction: Double = 
-    game(Alice, Bob).sample(10000)
-    .prMatching{ 
-      case Alice => }
+    /**
+   * Explanation of _aliceFraction:
+   * Alternate implementation to compute Alice's winning probability.
+   *
+   * Step 1: game(Alice, Bob) generates a probability distribution over results.
+   * Step 2: sample(10000) runs 10,000 simulations.
+   * Step 3: pr calculates the probability of a specific outcome.
+   */
+  lazy val ___aliceFraction: Double = 
+    game(Alice, Bob).sample(10000).pr(Some(P1)) 
   
   /**
    * Explanation of aliceFraction:
@@ -361,19 +377,12 @@ object Game:
         case Some(Player.P1) => true
       }
 
-  /**
-   * Explanation of _aliceFraction:
-   * Alternate implementation to compute Alice's winning probability.
-   *
-   * Step 1: game(Alice, Bob) generates a probability distribution over results.
-   * Step 2: sample(10000) runs 10,000 simulations.
-   * Step 3: pr calculates the probability of a specific outcome.
-   */
-  lazy val __aliceFraction: Double =
-    game(Alice, Bob) // Step 1: Generate game result distribution
-      .sample(10000) // Step 2: Sample 10,000 outcomes
-      .pr(Some(Player.P1)) // Step 3: Calculate probability of Alice winning
-    
+  //Thors version.
+  lazy val aliceFraction: Double = 
+    game(Alice, Bob).sample(10000).pr( _ match 
+      case Some(P1) => true
+      case _ => false )
+
 end Game
 
 
@@ -430,11 +439,15 @@ object RL:
   /**
    * Initializes a Q-table with zero values for all states and actions.
    */
-  def qZero(nStates: Int, nActions: Int): Q[Int, Int] =
-    val zeroValue = 0.0 // Define initial zero value for all actions
-    val actionMap = (0 until nActions).map(a => a -> zeroValue).toMap // Create zeroed action map
-    val stateActionMap = (0 until nStates).map(s => s -> actionMap).toMap // Create zeroed state-action map
-    stateActionMap // Return initialized Q-table
+  def qZero(nStates: Int, nActions: Int): Q[Int, Int] = 
+    val actionMap: Map[Int, Double] = List.fill(nActions)(0.0)
+        .zipWithIndex
+        .map(_.swap)
+        .toMap
+    List.fill(nStates)(actionMap)
+      .zipWithIndex
+      .map(_.swap)
+      .toMap
 
   /* We will also test on randomly initialized qTables, which are
    * created using the Scalacheck generator below.
@@ -466,6 +479,20 @@ object RL:
 
     property("00 Null update on null table 2x3") = 
       update(qZero(2, 3), 0, 0)(0.0, 0.0) == qZero(2, 3)
+      //update laver en ny QTable og har parameters:
+      //q: Q[Int, Int], state: Int, action: Int
+      //state: Int, action: Int
+      //reward: Double, estimate: Double
+      //estimate: Double => Q[Int, Int] = qZero(2, 3)
+
+      //qZero laver QTable og har parameters:
+      //  nStates: Int, nActions: Int
+
+      //qZero(2, 3) laver en QTable med 2 states og 3 actions
+      //, 0,0 er den position der skal opdateres (state = 0, action = 0)
+      //0.0, 0.0 er reward og estimate
+
+      //Det skal så være equals til qZero(2, 3) for at være korrekt
 
 
 
@@ -484,7 +511,7 @@ object RL:
      */
 
     property("01 Null update on null table 2x3") = 
-      forAllNoShrink(qGen(2,3)) { q => 
+      forAll(qGen(2,3)) { q => 
         val m = q(0).size
         val n = q.size
         forAll(Gen.choose(0, n-1), Gen.choose(0, m-1)) { (s, a) =>

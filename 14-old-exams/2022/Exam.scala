@@ -24,7 +24,7 @@
  * The answers will be graded manually. We focus on the correctness of ideas,
  * the use of concepts, clarity, and style. We are permissive on minor issues
  * such as semicolons, commas, other punctuation, small deviations in function
- * names, switching between curried and not curried arguments, etc. We will not
+ * names, switching between curried and not curried arguments, etc. We w5ill not
  * check whether the type inference succeeds. It suffices that a human reader
  * could infer types.
  *
@@ -42,9 +42,11 @@
  */
 package adpro
 
+
 import org.scalacheck.{Arbitrary, Gen, Prop}
 import Arbitrary.*, Prop.*
 import org.scalactic.Equality
+
 
 import fpinscala.answers.laziness.LazyList
 import fpinscala.answers.state.*
@@ -81,8 +83,11 @@ object ExceptionalOptions:
    *
    * https://docs.scala-lang.org/scala3/book/fp-functional-error-handling.html */
 
-  def SafeTotal[A,B](f: A => B): A => Option[B] = ???
-
+  def SafeTotal[A,B](f: A => B): A => Option[B] = 
+    a => 
+      try 
+        Some(f(a))
+      catch case error: Throwable => None
 
 
   /* Q2. (5%) Use `SafeTotal` to implement the `headOption` function for
@@ -90,7 +95,16 @@ object ExceptionalOptions:
    *
    * Notice that this question can be solved without answering Q1. */
 
-  def headOption[A](l: List[A]): Option[A] = ???
+  def headOption[A](l: List[A]): Option[A] = 
+    l match
+      case Nil => None
+      case h :: _ => SafeTotal(identity[A])(h)
+      //Fordi safeTotal returnere en function som tager en "A". Så her er vores A = vores head.
+      //Vores function er identity, fordi vi bare skal have head til head
+
+  //lærens
+  def ___headOption[A](l: List[A]): Option[A] = 
+    SafeTotal { (l: List[A]) => l.head } (l)
 
 end ExceptionalOptions
 
@@ -129,19 +143,37 @@ object PrimesAndLaziness:
    * - The first two prime numbers `p1`, `p2` that are 10 apart (p2 - p1 == 10)
    * - The second next pair `p3, p4` with the same property. */
 
-  def primesApart(n: Int): LazyList[(Int,Int)] = ???
+  def primesApart(n: Int): LazyList[(Int, Int)] = 
+    // Step 1: Pair consecutive primes from the lazy list.
+    val primesMinusFirstHead = primes.drop(1)
+    val consecutivePrimePairs = primes.zip(primesMinusFirstHead)
+    
+    // Step 2: Filter pairs where the difference between the second and first prime is exactly `n`.
+    consecutivePrimePairs.filter(pair => pair._2 - pair._1 == n)
 
-  lazy val (p1, p2): (Int, Int) = ???
-  lazy val (p3, p4): (Int, Int) = ???
 
+  lazy val (p1, p2): (Int, Int) = primesApart(10).headOption.get
+  lazy val (p3, p4): (Int, Int) = primesApart(10).drop(1).headOption.get
 
   
   /* Q4 (5%).  Explain in English how your solution uses laziness: 
    * - Name all the non-strict operators used in `primesApart` and in `primeFrom`
-   * - Explain what would happen if these operators were strict instead. */
+---Non-Strict Operators in primesApart--
+LazyList.drop(1) – Skips the first element lazily.
+LazyList.zip – Pairs elements lazily from two LazyLists.
+LazyList.filter – Filters elements lazily based on a condition.
+LazyList.headOption – Accesses the first element lazily.
+---Non-Strict Operators in primeFrom---
+LazyList.headOption – Retrieves the first element lazily.
+LazyList.cons – Constructs a LazyList with a lazy tail.
+LazyList.filter – Filters elements lazily based on a condition.
 
-  // Write here ...
-
+   * - Explain what would happen if these operators were strict instead. 
+Infinite Loops: Infinite lists would cause non-termination or stack overflow.
+Performance Issues: Unnecessary computations and high memory usage.
+Loss of Modularity: Deferred computation would no longer be possible.
+Non-Terminating Programs: Operations on infinite streams would fail outright.
+   * */
 
   
   /* Q5 (10%) Write a property-based test checking that for all even numbers
@@ -155,12 +187,24 @@ object PrimesAndLaziness:
     extends org.scalacheck.Properties("primesApartTest"): 
 
     property("Elements in pairs returned by primesApart differ by n") = 
-      ???
+      val gen = Gen.choose(2, 20).suchThat { _ % 2 == 0 }
+
+      forAll(gen) { (n: Int) =>
+
+        // Take the first 5 pairs
+        val pairs = PrimesAndLaziness.primesApart(n).take(5).toList
+        
+        // Debug Output
+        //println(s"\nTesting primesApart($n):")
+        //pairs.foreach { case (p1, p2) => println(s"($p1, $p2)") }
+
+        // Validate the difference
+        pairs.forall { (a: Int, b: Int) => b-a == n }
+      }
 
   end primesApartTest
 
 end PrimesAndLaziness
-
 
 
 object ApplesToApples:
@@ -173,6 +217,14 @@ object ApplesToApples:
     def leftBetter(left: T, right: T): Boolean 
 
   case class Apple(weight: Int)
+  
+  //ANSWER: Implicit instance of Better for Apple
+  /*
+  No implicit instance of Better[Apple] has been provided.
+  Without an implicit instance, Scala cannot determine how to compare two Apple objects.*/
+  given Better[Apple] with
+    def leftBetter(left: Apple, right: Apple): Boolean = 
+      left.weight > right.weight
 
   /** Returns a better of the two values provided. */
   def pickBetter[T: Better](left: T, right: T): T = 
@@ -191,7 +243,7 @@ object ApplesToApples:
 
   // Write here ... 
 
-  // assert(pickBetter(bigApple, smallApple) == bigApple)
+  assert(pickBetter(bigApple, smallApple) == bigApple)
 
 
 
@@ -203,8 +255,11 @@ object ApplesToApples:
    * If you do not know how to do this for any type T, it still makes sense to
    * make it possible just for the Apple type (it will give some points).
    */
-
-  // assert(bigApple betterThan smallApple)
+  extension [T: Better](left: T)
+    infix def betterThan(right: T): Boolean = 
+      summon[Better[T]].leftBetter(left, right)
+      
+  assert(bigApple betterThan smallApple)
 
 end ApplesToApples
 
@@ -222,15 +277,19 @@ object SizedLists:
   
   case class Inc[A]()
    
+  
   enum SizedList[+A, S]:
+    //+A is the element type, S is the size indicator
+    // Null is the terminal size indicator that indicates an empty list
+    
+      
     case Empty extends SizedList[Nothing, Null]
     case Cons[A, S](hd: A, tl: SizedList[A, S]) 
       extends SizedList[A, Inc[S]]
 
   import SizedList.*
 
-  val l0: SizedList[Int, Null] = Empty
-
+  val l0: SizedList[Int, Null] = Empty //Empty is defined as SizedList[Nothing, Null]
 
 
   /* Q8. (5%) Write the type annotation in the declaration below that
@@ -238,9 +297,12 @@ object SizedLists:
    * explicit type annotation for a list `l2` that contains three elements 
    * 3, 1, 4. */
 
-  val l1 = Cons(41, l0) 
+  val l1: SizedList[Int, Inc[Null]] = Cons(41, l0)
+
  
-  val l2 = ???
+  val l2: SizedList[Int, Inc[Inc[Inc[Null]]]] = 
+    Cons(3, Cons(1, Cons(4, l0)))
+
 
 
   
@@ -255,25 +317,32 @@ object SizedLists:
     case Cons(h, tl) => tl
 
 
-
   /* Q9. (10%) Write a function 'third' that given a sized list of `A`s returns
    * the third element in the list. The function should only be allowed to be 
    * called on a list containing at least three elements. */
 
-  // def third[A, S] ...
-
+  def third[A, S](l: SizedList[A, Inc[Inc[Inc[S]]]]): A = 
+    head(tail(tail(l)))
 
 
   /* Q10. (15%) Write a function `append` that adds an element to the end of the
    * List of type `Sized[A, S]` for any `A` and any `S`. Use recursion and respond to
    * the question in English below. */
 
-  // def append[ ... ](a: ..., l: ...): ... = ???
+  def append[A, S](a: A, l: SizedList[A, S]): SizedList[A, Inc[S]] = l match
+    case Empty => Cons(a, Empty) // Base case: Add the element to an empty list
+    case Cons(hd, tl) => Cons(hd, append(a, tl)) // Recursive case: Traverse until the end
+
 
   /* Mark the polymorphically recursive call in your solution. Describe in
-   * English what the type parameters are instantiated to in this call. */
+   * English what the type parameters are instantiated to in this call. 
+   * 
+Polymorphic Recursive Call:
+The call append(a, tl) is polymorphically recursive because the type of tl (SizedList[A, S]) gets transformed into SizedList[A, Inc[S]].
 
-  // Write here ... 
+Type Instantiation:
+S in the tail (tl) becomes Inc[S] after the recursive call.
+   * */
 
 
 
@@ -286,8 +355,29 @@ object SizedLists:
    * types for type variables, and two incorrect examples of type refinements
    * (so two examples of concrete `SizedList` types that do not refine each
    * other).  Each example should violate the variance of exactly one type
-   * parameter. */ 
-
-  // Write here ...
+   * parameter. 
+   * 
+  // SizedList is covariant in A and invariant in the S parameter. 
+  //
  
+  //KALDET BOUNDS I MINE NOTER.
+
+  // An example of correct refinement: 
+  // SizedList[Nothing, Inc[Null]] <: SizedList[Int, Inc[Null]]
+  //Nothing er en subtype af alt!
+
+  //
+  // An example of an incorrect refinement, violating the variance of the A
+  // parameter:
+  // SizedList[Int, Null] <: SizedList[Nothing, Null]
+  //Intet er en subtype af Nothing
+
+  // An example of an incorrect refinement, violating the variance of the S
+  // parameter:
+  // SizedList[Int, Null] <: SizedList[Int, Inc[Inc[Null]]]
+
+
+   * */ 
+
+
 end SizedLists

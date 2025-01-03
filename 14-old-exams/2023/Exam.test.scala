@@ -1,5 +1,5 @@
 /* These tests have not been available for the students writing the exam. */
-package adpro.solution
+package adpro
 
 import org.scalacheck.{Arbitrary, Gen, Prop}
 import org.scalacheck.Arbitrary.arbitrary
